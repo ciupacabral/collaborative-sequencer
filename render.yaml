@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: collab-sequencer-ws
+    env: node
+    rootDir: packages/server
+    buildCommand: npm install
+    startCommand: node src/index.js
+    # Render injects PORT automatically.
+    # Free tier spins down after 15min of inactivity — warn users in the UI
+    # if the WS connection is slow to open on first load.
