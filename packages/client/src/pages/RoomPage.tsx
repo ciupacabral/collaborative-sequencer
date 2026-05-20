@@ -39,6 +39,7 @@ function SequencerShell({ roomId }: { roomId: string }) {
   const mutations                             = useYjsMutations()
   const { playing, currentStep, toggle, previewNote } = useAudioEngine()
   const { peers }                             = usePeerFocus()
+  const { setFocus: setFocusShell }           = useLocalFocus()
   const [copied, setCopied]                   = useState(false)
   const [bpmInput, setBpmInput]               = useState<string>('')
 
@@ -73,7 +74,13 @@ function SequencerShell({ roomId }: { roomId: string }) {
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <button onClick={() => navigate('/')} className="text-zinc-500 hover:text-white transition-colors text-xs shrink-0">← Home</button>
-          <SessionNameEditor name={state.name} onSave={mutations.setSessionName} />
+          <PeerOverlay
+            addr={{ kind: 'sessionName' }}
+            onMouseEnter={() => setFocusShell({ kind: 'sessionName' })}
+            onMouseLeave={() => setFocusShell(null)}
+          >
+            <SessionNameEditor name={state.name} onSave={mutations.setSessionName} />
+          </PeerOverlay>
         </div>
         <div className="flex items-center gap-3 shrink-0">
           {/* Presence avatars */}
@@ -102,18 +109,30 @@ function SequencerShell({ roomId }: { roomId: string }) {
             : <span className="w-0 h-0 border-t-[7px] border-b-[7px] border-l-[12px] border-transparent border-l-white ml-0.5" />}
         </button>
         <label className="text-xs text-zinc-400">BPM</label>
-        <input type="range" min={20} max={280} value={state.tempo}
-          onChange={(e) => mutations.setTempo(Number(e.target.value))}
-          className="flex-1 min-w-32 accent-violet-500" />
-        {/* BPM number input — type a value and press Enter */}
-        <input
-          type="number" min={20} max={280}
-          value={bpmInput !== '' ? bpmInput : state.tempo}
-          onChange={(e) => setBpmInput(e.target.value)}
-          onBlur={commitBpm}
-          onKeyDown={handleBpmKey}
-          className="w-16 bg-zinc-800 text-right text-sm tabular-nums px-2 py-1 rounded border border-transparent focus:border-violet-500 outline-none"
-        />
+        <PeerOverlay
+          addr={{ kind: 'bpm' }}
+          className="flex-1 min-w-32"
+          onMouseEnter={() => setFocusShell({ kind: 'bpm' })}
+          onMouseLeave={() => setFocusShell(null)}
+        >
+          <input type="range" min={20} max={280} value={state.tempo}
+            onChange={(e) => mutations.setTempo(Number(e.target.value))}
+            className="w-full accent-violet-500" />
+        </PeerOverlay>
+        <PeerOverlay
+          addr={{ kind: 'bpm' }}
+          onMouseEnter={() => setFocusShell({ kind: 'bpm' })}
+          onMouseLeave={() => setFocusShell(null)}
+        >
+          <input
+            type="number" min={20} max={280}
+            value={bpmInput !== '' ? bpmInput : state.tempo}
+            onChange={(e) => setBpmInput(e.target.value)}
+            onBlur={commitBpm}
+            onKeyDown={handleBpmKey}
+            className="w-16 bg-zinc-800 text-right text-sm tabular-nums px-2 py-1 rounded border border-transparent focus:border-violet-500 outline-none"
+          />
+        </PeerOverlay>
         <button onClick={copyUrl} className="text-xs px-3 py-1.5 rounded bg-zinc-700 hover:bg-zinc-600 transition-colors">
           {copied ? 'Copied!' : 'Share'}
         </button>
@@ -131,7 +150,13 @@ function SequencerShell({ roomId }: { roomId: string }) {
             <div className="flex items-start gap-3 mb-4">
               <div className="flex flex-col shrink-0">
                 <span className="text-xs uppercase tracking-widest text-zinc-600">{track.type}</span>
-                <TrackNameEditor name={track.name} trackIdx={idx} />
+                <PeerOverlay
+                  addr={{ kind: 'trackName', trackId: track.id }}
+                  onMouseEnter={() => setFocusShell({ kind: 'trackName', trackId: track.id })}
+                  onMouseLeave={() => setFocusShell(null)}
+                >
+                  <TrackNameEditor name={track.name} trackIdx={idx} />
+                </PeerOverlay>
               </div>
               <div className="flex gap-2 ml-auto">
                 <button onClick={() => mutations.setTrackMuted(idx, !track.muted)}
@@ -315,20 +340,38 @@ function DrumGrid({ track, trackIdx, currentStep }: { track: DrumTrack; trackIdx
               })}
             </div>
             <div className="ml-2">
-              <PresetPicker keys={keys} value={current} onChange={(v) => setTrackParameter(trackIdx, param, v)} />
+              <PeerOverlay
+                addr={{ kind: 'param', trackId: track.id, key: param }}
+                onMouseEnter={() => setFocus({ kind: 'param', trackId: track.id, key: param })}
+                onMouseLeave={() => setFocus(null)}
+              >
+                <PresetPicker keys={keys} value={current} onChange={(v) => setTrackParameter(trackIdx, param, v)} />
+              </PeerOverlay>
             </div>
           </div>
         ))}
       </div>
 
       <div className="pt-2 border-t border-border flex flex-wrap gap-x-6 gap-y-2">
-        <StepCountPicker value={sc} onChange={(v) => setTrackParameter(trackIdx, 'stepCount', v)} />
-        <ParamSlider label="Volume" min={-40} max={6} step={0.5} value={track.parameters.volume}
-          onChange={(v) => setTrackParameter(trackIdx, 'volume', v)}
-          fmt={(v) => `${v} dB`} />
-        <ParamSlider label="Decay" min={0.05} max={2} value={track.parameters.decay}
-          onChange={(v) => setTrackParameter(trackIdx, 'decay', v)}
-          fmt={(v) => `${v.toFixed(2)} s`} />
+        <PeerOverlay addr={{ kind: 'param', trackId: track.id, key: 'stepCount' }}
+          onMouseEnter={() => setFocus({ kind: 'param', trackId: track.id, key: 'stepCount' })}
+          onMouseLeave={() => setFocus(null)}>
+          <StepCountPicker value={sc} onChange={(v) => setTrackParameter(trackIdx, 'stepCount', v)} />
+        </PeerOverlay>
+        <PeerOverlay addr={{ kind: 'param', trackId: track.id, key: 'volume' }}
+          onMouseEnter={() => setFocus({ kind: 'param', trackId: track.id, key: 'volume' })}
+          onMouseLeave={() => setFocus(null)}>
+          <ParamSlider label="Volume" min={-40} max={6} step={0.5} value={track.parameters.volume}
+            onChange={(v) => setTrackParameter(trackIdx, 'volume', v)}
+            fmt={(v) => `${v} dB`} />
+        </PeerOverlay>
+        <PeerOverlay addr={{ kind: 'param', trackId: track.id, key: 'decay' }}
+          onMouseEnter={() => setFocus({ kind: 'param', trackId: track.id, key: 'decay' })}
+          onMouseLeave={() => setFocus(null)}>
+          <ParamSlider label="Decay" min={0.05} max={2} value={track.parameters.decay}
+            onChange={(v) => setTrackParameter(trackIdx, 'decay', v)}
+            fmt={(v) => `${v.toFixed(2)} s`} />
+        </PeerOverlay>
       </div>
     </div>
   )
@@ -357,18 +400,46 @@ function MelodicGrid({ track, trackIdx, currentStep, previewNote }: {
       {/* Sound preset */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs text-zinc-500 w-14 shrink-0">Sound</span>
-        <PresetPicker keys={MELODIC_PRESET_KEYS} value={p.preset}
-          onChange={(v: MelodicPreset) => setMelodicPreset(trackIdx, v)} />
+        <PeerOverlay addr={{ kind: 'param', trackId: track.id, key: 'preset' }}
+          onMouseEnter={() => setFocus({ kind: 'param', trackId: track.id, key: 'preset' })}
+          onMouseLeave={() => setFocus(null)}>
+          <PresetPicker keys={MELODIC_PRESET_KEYS} value={p.preset}
+            onChange={(v: MelodicPreset) => setMelodicPreset(trackIdx, v)} />
+        </PeerOverlay>
       </div>
 
       {/* Parameters */}
       <div className="flex flex-wrap gap-x-6 gap-y-2">
-        <StepCountPicker value={sc} onChange={(v) => setTrackParameter(trackIdx, 'stepCount', v)} />
-        <ParamSlider label="Volume"  min={-40} max={6}   step={0.5}   value={p.volume}  onChange={(v) => setTrackParameter(trackIdx, 'volume',  v)} fmt={(v) => `${v} dB`} />
-        <ParamSlider label="Attack"  min={0.001} max={2} step={0.001} value={p.attack}  onChange={(v) => setTrackParameter(trackIdx, 'attack',  v)} fmt={(v) => `${v.toFixed(3)} s`} />
-        <ParamSlider label="Decay"   min={0.001} max={2} step={0.001} value={p.decay}   onChange={(v) => setTrackParameter(trackIdx, 'decay',   v)} fmt={(v) => `${v.toFixed(3)} s`} />
-        <ParamSlider label="Sustain" min={0} max={1}     step={0.01}  value={p.sustain} onChange={(v) => setTrackParameter(trackIdx, 'sustain', v)} fmt={(v) => `${Math.round(v * 100)} %`} />
-        <ParamSlider label="Release" min={0.001} max={5} step={0.001} value={p.release} onChange={(v) => setTrackParameter(trackIdx, 'release', v)} fmt={(v) => `${v.toFixed(3)} s`} />
+        <PeerOverlay addr={{ kind: 'param', trackId: track.id, key: 'stepCount' }}
+          onMouseEnter={() => setFocus({ kind: 'param', trackId: track.id, key: 'stepCount' })}
+          onMouseLeave={() => setFocus(null)}>
+          <StepCountPicker value={sc} onChange={(v) => setTrackParameter(trackIdx, 'stepCount', v)} />
+        </PeerOverlay>
+        <PeerOverlay addr={{ kind: 'param', trackId: track.id, key: 'volume' }}
+          onMouseEnter={() => setFocus({ kind: 'param', trackId: track.id, key: 'volume' })}
+          onMouseLeave={() => setFocus(null)}>
+          <ParamSlider label="Volume"  min={-40} max={6}   step={0.5}   value={p.volume}  onChange={(v) => setTrackParameter(trackIdx, 'volume',  v)} fmt={(v) => `${v} dB`} />
+        </PeerOverlay>
+        <PeerOverlay addr={{ kind: 'param', trackId: track.id, key: 'attack' }}
+          onMouseEnter={() => setFocus({ kind: 'param', trackId: track.id, key: 'attack' })}
+          onMouseLeave={() => setFocus(null)}>
+          <ParamSlider label="Attack"  min={0.001} max={2} step={0.001} value={p.attack}  onChange={(v) => setTrackParameter(trackIdx, 'attack',  v)} fmt={(v) => `${v.toFixed(3)} s`} />
+        </PeerOverlay>
+        <PeerOverlay addr={{ kind: 'param', trackId: track.id, key: 'decay' }}
+          onMouseEnter={() => setFocus({ kind: 'param', trackId: track.id, key: 'decay' })}
+          onMouseLeave={() => setFocus(null)}>
+          <ParamSlider label="Decay"   min={0.001} max={2} step={0.001} value={p.decay}   onChange={(v) => setTrackParameter(trackIdx, 'decay',   v)} fmt={(v) => `${v.toFixed(3)} s`} />
+        </PeerOverlay>
+        <PeerOverlay addr={{ kind: 'param', trackId: track.id, key: 'sustain' }}
+          onMouseEnter={() => setFocus({ kind: 'param', trackId: track.id, key: 'sustain' })}
+          onMouseLeave={() => setFocus(null)}>
+          <ParamSlider label="Sustain" min={0} max={1}     step={0.01}  value={p.sustain} onChange={(v) => setTrackParameter(trackIdx, 'sustain', v)} fmt={(v) => `${Math.round(v * 100)} %`} />
+        </PeerOverlay>
+        <PeerOverlay addr={{ kind: 'param', trackId: track.id, key: 'release' }}
+          onMouseEnter={() => setFocus({ kind: 'param', trackId: track.id, key: 'release' })}
+          onMouseLeave={() => setFocus(null)}>
+          <ParamSlider label="Release" min={0.001} max={5} step={0.001} value={p.release} onChange={(v) => setTrackParameter(trackIdx, 'release', v)} fmt={(v) => `${v.toFixed(3)} s`} />
+        </PeerOverlay>
       </div>
 
       {/* Playhead row */}
