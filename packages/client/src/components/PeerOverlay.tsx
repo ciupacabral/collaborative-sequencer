@@ -6,12 +6,14 @@ const CHIP_DEBOUNCE_MS = 200
 const MAX_CHIPS        = 2
 
 interface Props {
-  addr:     FocusAddress
-  children: ReactNode
-  className?: string
+  addr:           FocusAddress
+  children:       ReactNode
+  className?:     string
+  onMouseEnter?:  () => void
+  onMouseLeave?:  () => void
 }
 
-export function PeerOverlay({ addr, children, className }: Props) {
+export function PeerOverlay({ addr, children, className, onMouseEnter, onMouseLeave }: Props) {
   const { peers, byAddress, recentEdits } = usePeerFocus()
   const focusedPeers = byAddress(addr)
   const edits        = recentEdits(addr)
@@ -24,7 +26,11 @@ export function PeerOverlay({ addr, children, className }: Props) {
   }, [focusedPeers.length, focusedPeers.map((p) => p.clientID).join(',')])
 
   return (
-    <span className={`relative inline-block ${className ?? ''}`}>
+    <span
+      className={`relative inline-block ${className ?? ''}`}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
       {children}
 
       {focusedPeers.map((p, i) => (
