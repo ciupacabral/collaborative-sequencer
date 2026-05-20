@@ -4,7 +4,7 @@ import { YjsProvider, useYjs } from '../context/YjsContext'
 import { useSequencer } from '../hooks/useSequencer'
 import { useYjsMutations } from '../hooks/useYjsMutations'
 import { useAudioEngine } from '../hooks/useAudioEngine'
-import { usePresence } from '../hooks/usePresence'
+import { PeerFocusProvider, usePeerFocus } from '../context/PeerFocusContext'
 import { upsertSession, updateSessionName } from '../lib/localSessions'
 import { STEP_COUNT_OPTIONS } from '../types/sequencer'
 import type { DrumTrack, MelodicTrack } from '../types/sequencer'
@@ -20,7 +20,9 @@ export function RoomPage() {
   if (!roomId) return <Navigate to="/" replace />
   return (
     <YjsProvider key={roomId} roomId={roomId}>
-      <SequencerShell roomId={roomId} />
+      <PeerFocusProvider>
+        <SequencerShell roomId={roomId} />
+      </PeerFocusProvider>
     </YjsProvider>
   )
 }
@@ -33,7 +35,7 @@ function SequencerShell({ roomId }: { roomId: string }) {
   const state                                 = useSequencer()
   const mutations                             = useYjsMutations()
   const { playing, currentStep, toggle, previewNote } = useAudioEngine()
-  const peers                                 = usePresence()
+  const { peers }                             = usePeerFocus()
   const [copied, setCopied]                   = useState(false)
   const [bpmInput, setBpmInput]               = useState<string>('')
 
