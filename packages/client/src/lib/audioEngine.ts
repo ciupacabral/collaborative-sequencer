@@ -103,7 +103,7 @@ export class AudioEngine {
     ch.volume.value = (p?.get('volume') as number) ?? 0
 
     const buildPoly = (oscType: string) => new Tone.PolySynth(Tone.Synth, {
-      oscillator: { type: oscType as Tone.ToneOscillatorType },
+      oscillator: { type: oscType } as unknown as Tone.OmniOscillatorOptions,
       envelope: {
         attack:  (p?.get('attack')  as number) ?? 0.01,
         decay:   (p?.get('decay')   as number) ?? 0.1,

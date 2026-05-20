@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Navigate, useNavigate } from 'react-router-dom'
 import { YjsProvider, useYjs } from '../context/YjsContext'
 import { useSequencer } from '../hooks/useSequencer'
@@ -6,7 +6,7 @@ import { useYjsMutations } from '../hooks/useYjsMutations'
 import { useAudioEngine } from '../hooks/useAudioEngine'
 import { usePresence } from '../hooks/usePresence'
 import { upsertSession, updateSessionName } from '../lib/localSessions'
-import { DRUM_INSTRUMENTS, STEP_COUNT_OPTIONS } from '../types/sequencer'
+import { STEP_COUNT_OPTIONS } from '../types/sequencer'
 import type { DrumTrack, MelodicTrack } from '../types/sequencer'
 import {
   KICK_PRESET_KEYS, SNARE_PRESET_KEYS, HIHAT_PRESET_KEYS, MELODIC_PRESET_KEYS,

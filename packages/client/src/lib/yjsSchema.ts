@@ -8,7 +8,6 @@ import {
   type MelodicParameters,
   type MelodicStep,
   type DrumTrack,
-  type MelodicTrack,
   type Track,
   type SequencerSnapshot,
 } from '../types/sequencer'
