@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Navigate, useNavigate } from 'react-router-dom'
 import { YjsProvider, useYjs } from '../context/YjsContext'
 import { useSequencer } from '../hooks/useSequencer'
-import { useYjsMutations } from '../hooks/useYjsMutations'
+import { useSignaledMutations } from '../hooks/useSignaledMutations'
 import { useAudioEngine } from '../hooks/useAudioEngine'
 import { PeerFocusProvider, usePeerFocus } from '../context/PeerFocusContext'
 import { useLocalFocus } from '../hooks/useLocalFocus'
@@ -36,7 +36,7 @@ function SequencerShell({ roomId }: { roomId: string }) {
   const navigate                              = useNavigate()
   const { status }                            = useYjs()
   const state                                 = useSequencer()
-  const mutations                             = useYjsMutations()
+  const mutations                             = useSignaledMutations()
   const { playing, currentStep, toggle, previewNote } = useAudioEngine()
   const { peers }                             = usePeerFocus()
   const { setFocus: setFocusShell }           = useLocalFocus()
@@ -220,7 +220,7 @@ function SessionNameEditor({ name, onSave }: { name: string; onSave: (n: string)
 // ─── Inline track name editor ─────────────────────────────────────────────────
 
 function TrackNameEditor({ name, trackIdx }: { name: string; trackIdx: number }) {
-  const { setTrackName }      = useYjsMutations()
+  const { setTrackName }      = useSignaledMutations()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft]     = useState(name)
 
@@ -304,7 +304,7 @@ function StepCountPicker({ value, onChange }: { value: number; onChange: (v: num
 // ─── Drum grid + params ───────────────────────────────────────────────────────
 
 function DrumGrid({ track, trackIdx, currentStep }: { track: DrumTrack; trackIdx: number; currentStep: number }) {
-  const { toggleDrumStep, setTrackParameter } = useYjsMutations()
+  const { toggleDrumStep, setTrackParameter } = useSignaledMutations()
   const { setFocus }                          = useLocalFocus()
   const sc = track.parameters.stepCount
 
@@ -390,7 +390,7 @@ function MelodicGrid({ track, trackIdx, currentStep, previewNote }: {
   currentStep: number
   previewNote: (trackId: string, note: string) => void
 }) {
-  const { setMelodicStep, setMelodicPreset, setTrackParameter } = useYjsMutations()
+  const { setMelodicStep, setMelodicPreset, setTrackParameter } = useSignaledMutations()
   const { setFocus } = useLocalFocus()
   const p  = track.parameters
   const sc = p.stepCount
