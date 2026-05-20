@@ -6,3 +6,13 @@ body {
   margin: 0;
   background-color: #0f0f0f;
 }
+
+@keyframes peer-edit-pulse {
+  0%   { opacity: 1; transform: scale(1.15); }
+  100% { opacity: 0; transform: scale(1.00); }
+}
+
+.peer-edit-pulse {
+  animation: peer-edit-pulse 1200ms ease-out forwards;
+  pointer-events: none;
+}
