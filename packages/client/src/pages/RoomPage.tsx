@@ -5,6 +5,9 @@ import { useSequencer } from '../hooks/useSequencer'
 import { useYjsMutations } from '../hooks/useYjsMutations'
 import { useAudioEngine } from '../hooks/useAudioEngine'
 import { PeerFocusProvider, usePeerFocus } from '../context/PeerFocusContext'
+import { useLocalFocus } from '../hooks/useLocalFocus'
+import { PeerOverlay } from '../components/PeerOverlay'
+import type { FocusAddress } from '../types/awareness'
 import { upsertSession, updateSessionName } from '../lib/localSessions'
 import { STEP_COUNT_OPTIONS } from '../types/sequencer'
 import type { DrumTrack, MelodicTrack } from '../types/sequencer'
@@ -277,6 +280,7 @@ function StepCountPicker({ value, onChange }: { value: number; onChange: (v: num
 
 function DrumGrid({ track, trackIdx, currentStep }: { track: DrumTrack; trackIdx: number; currentStep: number }) {
   const { toggleDrumStep, setTrackParameter } = useYjsMutations()
+  const { setFocus }                          = useLocalFocus()
   const sc = track.parameters.stepCount
 
   const LANE_META = [
@@ -292,16 +296,23 @@ function DrumGrid({ track, trackIdx, currentStep }: { track: DrumTrack; trackIdx
           <div key={inst} className="flex items-center gap-2 flex-wrap">
             <span className="w-11 text-xs text-zinc-500 capitalize shrink-0">{inst}</span>
             <div className="flex gap-1">
-              {track.lanes[inst].slice(0, sc).map((active, step) => (
-                <button key={step} onClick={() => toggleDrumStep(trackIdx, inst, step)}
-                  className={[
-                    'w-7 h-7 rounded transition-colors',
-                    active ? 'bg-violet-500 hover:bg-violet-400' : 'bg-zinc-800 hover:bg-zinc-700',
-                    (currentStep % sc) === step ? 'ring-1 ring-white/60' : '',
-                    step % 4 === 0 && step !== 0 ? 'ml-1' : '',
-                  ].join(' ')}
-                />
-              ))}
+              {track.lanes[inst].slice(0, sc).map((active, step) => {
+                const addr: FocusAddress = { kind: 'drumStep', trackId: track.id, instrument: inst, step }
+                return (
+                  <PeerOverlay key={step} addr={addr}>
+                    <button onClick={() => toggleDrumStep(trackIdx, inst, step)}
+                      onMouseEnter={() => setFocus(addr)}
+                      onMouseLeave={() => setFocus(null)}
+                      className={[
+                        'w-7 h-7 rounded transition-colors',
+                        active ? 'bg-violet-500 hover:bg-violet-400' : 'bg-zinc-800 hover:bg-zinc-700',
+                        (currentStep % sc) === step ? 'ring-1 ring-white/60' : '',
+                        step % 4 === 0 && step !== 0 ? 'ml-1' : '',
+                      ].join(' ')}
+                    />
+                  </PeerOverlay>
+                )
+              })}
             </div>
             <div className="ml-2">
               <PresetPicker keys={keys} value={current} onChange={(v) => setTrackParameter(trackIdx, param, v)} />
@@ -337,6 +348,7 @@ function MelodicGrid({ track, trackIdx, currentStep, previewNote }: {
   previewNote: (trackId: string, note: string) => void
 }) {
   const { setMelodicStep, setMelodicPreset, setTrackParameter } = useYjsMutations()
+  const { setFocus } = useLocalFocus()
   const p  = track.parameters
   const sc = p.stepCount
 
@@ -375,23 +387,26 @@ function MelodicGrid({ track, trackIdx, currentStep, previewNote }: {
               <span className={`w-8 text-right text-xs shrink-0 ${isBlack ? 'text-zinc-700' : 'text-zinc-500'}`}>{note}</span>
               <div className="flex gap-1">
                 {track.steps.slice(0, sc).map((step, si) => {
-                  // step is Record<string, boolean> — note → active
                   const lit = !!step[note]
+                  const addr: FocusAddress = { kind: 'melodicStep', trackId: track.id, step: si, note }
                   return (
-                    <button key={si}
-                      onClick={() => {
-                        const nowActive = !lit
-                        setMelodicStep(trackIdx, si, note, nowActive)
-                        // Preview the note on placement (not on removal)
-                        if (nowActive) previewNote(track.id, note)
-                      }}
-                      className={[
-                        'w-7 h-3.5 rounded-sm transition-colors',
-                        lit ? 'bg-violet-500 hover:bg-violet-400' : isBlack ? 'bg-zinc-900 hover:bg-zinc-700' : 'bg-zinc-800 hover:bg-zinc-700',
-                        (currentStep % sc) === si ? 'ring-1 ring-white/40' : '',
-                        si % 4 === 0 && si !== 0 ? 'ml-1' : '',
-                      ].join(' ')}
-                    />
+                    <PeerOverlay key={si} addr={addr}>
+                      <button
+                        onClick={() => {
+                          const nowActive = !lit
+                          setMelodicStep(trackIdx, si, note, nowActive)
+                          if (nowActive) previewNote(track.id, note)
+                        }}
+                        onMouseEnter={() => setFocus(addr)}
+                        onMouseLeave={() => setFocus(null)}
+                        className={[
+                          'w-7 h-3.5 rounded-sm transition-colors',
+                          lit ? 'bg-violet-500 hover:bg-violet-400' : isBlack ? 'bg-zinc-900 hover:bg-zinc-700' : 'bg-zinc-800 hover:bg-zinc-700',
+                          (currentStep % sc) === si ? 'ring-1 ring-white/40' : '',
+                          si % 4 === 0 && si !== 0 ? 'ml-1' : '',
+                        ].join(' ')}
+                      />
+                    </PeerOverlay>
                   )
                 })}
               </div>
