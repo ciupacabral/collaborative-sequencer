@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useYjs } from '../context/YjsContext'
 import { AudioEngine } from '../lib/audioEngine'
+import type { AudioSample } from '../lib/measurements'
 
 export function useAudioEngine() {
   const { ydoc }  = useYjs()
@@ -32,5 +33,9 @@ export function useAudioEngine() {
     ref.current?.previewNote(trackId, note)
   }, [])
 
-  return { playing, currentStep, toggle, previewNote }
+  const attachMeasurementsSink = useCallback((sink: ((s: AudioSample) => void) | null) => {
+    ref.current?.setMeasurementsSink(sink)
+  }, [])
+
+  return { playing, currentStep, toggle, previewNote, attachMeasurementsSink }
 }
