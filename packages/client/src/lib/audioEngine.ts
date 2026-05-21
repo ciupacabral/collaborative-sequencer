@@ -6,6 +6,7 @@ import {
   KICK_PRESETS, SNARE_PRESETS, HIHAT_PRESETS,
   type KickPreset, type SnarePreset, type HihatPreset,
 } from './presets'
+import type { AudioSample } from './measurements'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -34,6 +35,13 @@ export class AudioEngine {
   private map            = new Map<string, Entry>()
   private seq:             Tone.Sequence<number>
   private observingTracks = false
+  private measureSink:     ((s: AudioSample) => void) | null = null
+  private prevTickTime:    number | null = null
+
+  setMeasurementsSink(sink: ((s: AudioSample) => void) | null): void {
+    this.measureSink = sink
+    this.prevTickTime = null
+  }
 
   constructor(ydoc: Y.Doc) {
     this.ydoc = ydoc
@@ -183,6 +191,23 @@ export class AudioEngine {
         })
       }
     })
+
+    if (this.measureSink) {
+      const prev = this.prevTickTime
+      this.prevTickTime = time
+      if (prev !== null) {
+        const bpm        = Tone.getTransport().bpm.value
+        const expected_s = 60 / bpm / 4
+        const delta_s    = time - prev
+        this.measureSink({
+          tickIndex:   step,
+          delta_ms:    delta_s * 1000,
+          expected_ms: expected_s * 1000,
+          jitter_ms:   Math.abs(delta_s - expected_s) * 1000,
+          at:          Date.now(),
+        })
+      }
+    }
   }
 
   // ── Root map observer ──────────────────────────────────────────────────────
