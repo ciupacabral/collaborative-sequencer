@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
-import { useParams, Navigate, useNavigate } from 'react-router-dom'
+import { useParams, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { YjsProvider, useYjs } from '../context/YjsContext'
 import { useSequencer } from '../hooks/useSequencer'
 import { useSignaledMutations } from '../hooks/useSignaledMutations'
 import { useAudioEngine } from '../hooks/useAudioEngine'
 import { PeerFocusProvider, usePeerFocus } from '../context/PeerFocusContext'
 import { useLocalFocus } from '../hooks/useLocalFocus'
+import { useMeasurements } from '../hooks/useMeasurements'
 import { PeerOverlay } from '../components/PeerOverlay'
+import { DebugOverlay } from '../components/DebugOverlay'
 import type { FocusAddress } from '../types/awareness'
 import { upsertSession, updateSessionName } from '../lib/localSessions'
 import { STEP_COUNT_OPTIONS } from '../types/sequencer'
@@ -37,9 +39,16 @@ function SequencerShell({ roomId }: { roomId: string }) {
   const { status }                            = useYjs()
   const state                                 = useSequencer()
   const mutations                             = useSignaledMutations()
-  const { playing, currentStep, toggle, previewNote } = useAudioEngine()
+  const { playing, currentStep, toggle, previewNote, attachMeasurementsSink } = useAudioEngine()
   const { peers }                             = usePeerFocus()
   const { setFocus: setFocusShell }           = useLocalFocus()
+  const [searchParams]                        = useSearchParams()
+  const debugEnabled                          = searchParams.get('debug') === '1'
+  const measurements                          = useMeasurements({
+    enabled:         debugEnabled,
+    roomId,
+    attachAudioSink: attachMeasurementsSink,
+  })
   const [copied, setCopied]                   = useState(false)
   const [bpmInput, setBpmInput]               = useState<string>('')
 
@@ -182,6 +191,8 @@ function SequencerShell({ roomId }: { roomId: string }) {
         <summary className="p-3 text-xs text-zinc-600 cursor-pointer hover:text-zinc-400">Y.js snapshot</summary>
         <pre className="p-4 text-xs text-zinc-500 overflow-auto max-h-48 border-t border-border">{JSON.stringify(state, null, 2)}</pre>
       </details>
+
+      {measurements && <DebugOverlay ctx={measurements} />}
     </div>
   )
 }
