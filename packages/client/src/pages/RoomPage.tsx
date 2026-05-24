@@ -501,14 +501,14 @@ function MelodicGrid({ track, trackIdx, currentStep, previewNote }: {
       </div>
 
       {/* Piano roll — supports polyphony: multiple notes per column */}
-      <div ref={pianoRollRef} className="max-h-[300px] overflow-y-auto pr-1 border border-zinc-800 rounded">
+      <div ref={pianoRollRef} className="max-h-[300px] overflow-auto pr-1 border border-zinc-800 rounded">
         <div className="space-y-px">
         {PIANO_ROLL.map((note) => {
           const isBlack = note.includes('#')
           return (
             <div key={note} className="flex items-center gap-2">
               <span className={`w-8 text-right text-xs shrink-0 ${isBlack ? 'text-zinc-700' : 'text-zinc-500'}`}>{note}</span>
-              <div className="flex gap-1 overflow-x-auto max-w-full">
+              <div className="flex gap-1">
                 {track.steps.slice(0, sc).map((step, si) => {
                   const lit = !!step[note]
                   const addr: FocusAddress = { kind: 'melodicStep', trackId: track.id, step: si, note }
