@@ -193,6 +193,51 @@ export function removeTrack(ydoc: Y.Doc, trackIndex: number): void {
   ydoc.transact(() => getYTracks(ydoc).delete(trackIndex, 1))
 }
 
+export function duplicateTrack(ydoc: Y.Doc, trackIndex: number, newId: string): void {
+  ydoc.transact(() => {
+    const yTracks = getYTracks(ydoc)
+    const source  = yTracks.get(trackIndex)
+    if (!source) return
+
+    const type = source.get('type') as string
+    const copy = new Y.Map() as YTrack
+    copy.set('id',    newId)
+    copy.set('type',  type)
+    copy.set('name',  `${source.get('name')} (copy)`)
+    copy.set('muted', source.get('muted') as boolean)
+
+    if (type === 'drum') {
+      const srcLanes = source.get('lanes') as YLanes
+      const newLanes = new Y.Map() as YLanes
+      for (const inst of DRUM_INSTRUMENTS) {
+        const srcLane = srcLanes.get(inst) as Y.Array<boolean>
+        const newLane = new Y.Array<boolean>()
+        newLane.insert(0, srcLane.toArray())
+        newLanes.set(inst, newLane)
+      }
+      copy.set('lanes', newLanes)
+    } else if (type === 'melodic') {
+      const srcSteps = source.get('steps') as YSteps
+      const newStepArr: Y.Map<boolean>[] = []
+      srcSteps.forEach((srcStep) => {
+        const newStep = new Y.Map<boolean>()
+        srcStep.forEach((v, k) => newStep.set(k, v))
+        newStepArr.push(newStep)
+      })
+      const newSteps = new Y.Array<Y.Map<boolean>>()
+      newSteps.insert(0, newStepArr)
+      copy.set('steps', newSteps)
+    }
+
+    const srcParams = source.get('parameters') as YParameters
+    const newParams = new Y.Map() as YParameters
+    srcParams.forEach((v, k) => newParams.set(k, v))
+    copy.set('parameters', newParams)
+
+    yTracks.push([copy])
+  })
+}
+
 /**
  * Toggle a single drum step.
  * Y.Array has no .set(index, val) — the correct pattern is delete + re-insert.

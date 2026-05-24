@@ -28,6 +28,7 @@ export function useSignaledMutations() {
       addMelodicTrack: m.addMelodicTrack,
       addBassTrack:    m.addBassTrack,
       removeTrack:     m.removeTrack,
+      duplicateTrack:  m.duplicateTrack,
       toggleDrumStep: (idx: number, inst: DrumInstrument, step: number) => {
         m.toggleDrumStep(idx, inst, step)
         const trackId = trackIdOf(idx)
