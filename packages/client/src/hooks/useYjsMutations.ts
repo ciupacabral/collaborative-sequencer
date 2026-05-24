@@ -27,6 +27,7 @@ export function useYjsMutations() {
       setSessionName:   (name: string)                                                    => setSessionName(ydoc, name),
       addDrumTrack:     (name = 'Drums')                                                  => addTrack(ydoc, createDrumTrackYMap(uuidv4(), name)),
       addMelodicTrack:  (name = 'Synth')                                                  => addTrack(ydoc, createMelodicTrackYMap(uuidv4(), name)),
+      addBassTrack:     (name = 'Bass')                                                   => addTrack(ydoc, createMelodicTrackYMap(uuidv4(), name, 'fat-bass')),
       removeTrack:      (idx: number)                                                     => removeTrack(ydoc, idx),
       toggleDrumStep:   (idx: number, inst: DrumInstrument, step: number)                 => toggleDrumStep(ydoc, idx, inst, step),
       setMelodicStep:   (idx: number, step: number, note: string, active: boolean)        => setMelodicStep(ydoc, idx, step, note, active),

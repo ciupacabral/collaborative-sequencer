@@ -26,6 +26,7 @@ export function useSignaledMutations() {
       },
       addDrumTrack:    m.addDrumTrack,
       addMelodicTrack: m.addMelodicTrack,
+      addBassTrack:    m.addBassTrack,
       removeTrack:     m.removeTrack,
       toggleDrumStep: (idx: number, inst: DrumInstrument, step: number) => {
         m.toggleDrumStep(idx, inst, step)
