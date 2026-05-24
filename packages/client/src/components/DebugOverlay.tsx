@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { downloadJson, percentile, stdev } from '../lib/measurements'
 import type { MeasurementsContextValue } from '../hooks/useMeasurements'
 
+const SCENARIOS = ['default', 'LAN', 'WiFi', 'Slow 3G', 'Fast 3G', 'Cellular'] as const
+
 interface Props {
   ctx: MeasurementsContextValue
 }
@@ -20,7 +22,6 @@ export function DebugOverlay({ ctx }: Props) {
   const aSig = stdev(audioWindow)
   const aMax = audioWindow.length === 0 ? null : Math.max(...audioWindow)
 
-  const onCommitTag = () => store.setScenario(tag)
   const onReset     = () => store.reset()
   const onExport    = () => {
     const stamp = new Date().toISOString().slice(11, 16).replace(':', '')
@@ -51,13 +52,15 @@ export function DebugOverlay({ ctx }: Props) {
       </div>
       <div className="pt-1 border-t border-zinc-800 flex items-center gap-1">
         <span className="text-zinc-500 shrink-0">scenario:</span>
-        <input
+        <select
           value={tag}
-          onChange={(e) => setTag(e.target.value)}
-          onBlur={onCommitTag}
-          onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+          onChange={(e) => { setTag(e.target.value); store.setScenario(e.target.value) }}
           className="flex-1 bg-zinc-900 px-1 py-0.5 rounded text-[11px] outline-none focus:ring-1 focus:ring-zinc-600"
-        />
+        >
+          {SCENARIOS.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
       </div>
       <div className="flex gap-1">
         <button onClick={onReset}  className="flex-1 bg-zinc-800 hover:bg-zinc-700 rounded py-0.5">Reset</button>
