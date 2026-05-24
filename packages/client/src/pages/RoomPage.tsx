@@ -9,6 +9,7 @@ import { useLocalFocus } from '../hooks/useLocalFocus'
 import { useMeasurements } from '../hooks/useMeasurements'
 import { PeerOverlay } from '../components/PeerOverlay'
 import { DebugOverlay } from '../components/DebugOverlay'
+import { ShareQRModal } from '../components/ShareQRModal'
 import type { FocusAddress } from '../types/awareness'
 import { upsertSession, updateSessionName } from '../lib/localSessions'
 import { STEP_COUNT_OPTIONS } from '../types/sequencer'
@@ -51,6 +52,7 @@ function SequencerShell({ roomId }: { roomId: string }) {
   })
   const [copied, setCopied]                   = useState(false)
   const [bpmInput, setBpmInput]               = useState<string>('')
+  const [qrOpen, setQrOpen]                   = useState(false)
 
   // Keep localStorage in sync with session name from Y.js
   useEffect(() => {
@@ -108,7 +110,7 @@ function SequencerShell({ roomId }: { roomId: string }) {
       </div>
 
       {/* Transport */}
-      <div className="bg-panel border border-border rounded-lg p-4 flex flex-wrap items-center gap-4">
+      <div className="bg-panel border border-border rounded-lg p-4 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4">
         <button onClick={toggle} disabled={status !== 'connected'}
           className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors shrink-0 ${
             playing ? 'bg-red-600 hover:bg-red-500' : 'bg-violet-600 hover:bg-violet-500 disabled:opacity-40'
@@ -145,6 +147,9 @@ function SequencerShell({ roomId }: { roomId: string }) {
         <button onClick={copyUrl} className="text-xs px-3 py-1.5 rounded bg-zinc-700 hover:bg-zinc-600 transition-colors">
           {copied ? 'Copied!' : 'Share'}
         </button>
+        <button onClick={() => setQrOpen(true)} className="text-xs px-3 py-1.5 rounded bg-zinc-700 hover:bg-zinc-600 transition-colors" title="Show QR code">
+          📱 QR
+        </button>
         <div className="flex gap-2 ml-auto">
           <button onClick={() => mutations.addDrumTrack()}    className="text-xs px-3 py-1.5 rounded bg-zinc-700 hover:bg-zinc-600 transition-colors">+ Drum</button>
           <button onClick={() => mutations.addMelodicTrack()} className="text-xs px-3 py-1.5 rounded bg-zinc-700 hover:bg-zinc-600 transition-colors">+ Melodic</button>
@@ -168,7 +173,7 @@ function SequencerShell({ roomId }: { roomId: string }) {
                   <TrackNameEditor name={track.name} trackIdx={idx} />
                 </PeerOverlay>
               </div>
-              <div className="flex gap-2 ml-auto">
+              <div className="flex gap-2 ml-auto flex-wrap">
                 <button onClick={() => mutations.setTrackMuted(idx, !track.muted)}
                   className={`text-xs px-2.5 py-1 rounded transition-colors ${track.muted ? 'bg-red-900 text-red-300' : 'bg-zinc-700 text-zinc-300'}`}>
                   {track.muted ? 'Muted' : 'Mute'}
@@ -197,6 +202,7 @@ function SequencerShell({ roomId }: { roomId: string }) {
       </details>
 
       {measurements && <DebugOverlay ctx={measurements} />}
+      {qrOpen && <ShareQRModal url={window.location.href} onClose={() => setQrOpen(false)} />}
     </div>
   )
 }
@@ -335,7 +341,7 @@ function DrumGrid({ track, trackIdx, currentStep }: { track: DrumTrack; trackIdx
         {LANE_META.map(({ inst, keys, param, current }) => (
           <div key={inst} className="flex items-center gap-2 flex-wrap">
             <span className="w-11 text-xs text-zinc-500 capitalize shrink-0">{inst}</span>
-            <div className="flex gap-1">
+            <div className="flex gap-1 overflow-x-auto max-w-full">
               {track.lanes[inst].slice(0, sc).map((active, step) => {
                 const addr: FocusAddress = { kind: 'drumStep', trackId: track.id, instrument: inst, step }
                 return (
@@ -344,7 +350,7 @@ function DrumGrid({ track, trackIdx, currentStep }: { track: DrumTrack; trackIdx
                       onMouseEnter={() => setFocus(addr)}
                       onMouseLeave={() => setFocus(null)}
                       className={[
-                        'w-7 h-7 rounded transition-colors',
+                        'w-9 h-9 sm:w-7 sm:h-7 rounded transition-colors',
                         active ? 'bg-violet-500 hover:bg-violet-400' : 'bg-zinc-800 hover:bg-zinc-700',
                         (currentStep % sc) === step ? 'ring-1 ring-white/60' : '',
                         step % 4 === 0 && step !== 0 ? 'ml-1' : '',
@@ -502,7 +508,7 @@ function MelodicGrid({ track, trackIdx, currentStep, previewNote }: {
           return (
             <div key={note} className="flex items-center gap-2">
               <span className={`w-8 text-right text-xs shrink-0 ${isBlack ? 'text-zinc-700' : 'text-zinc-500'}`}>{note}</span>
-              <div className="flex gap-1">
+              <div className="flex gap-1 overflow-x-auto max-w-full">
                 {track.steps.slice(0, sc).map((step, si) => {
                   const lit = !!step[note]
                   const addr: FocusAddress = { kind: 'melodicStep', trackId: track.id, step: si, note }
@@ -517,7 +523,7 @@ function MelodicGrid({ track, trackIdx, currentStep, previewNote }: {
                         onMouseEnter={() => setFocus(addr)}
                         onMouseLeave={() => setFocus(null)}
                         className={[
-                          'w-7 h-3.5 rounded-sm transition-colors',
+                          'w-9 h-5 sm:w-7 sm:h-3.5 rounded-sm transition-colors',
                           lit ? 'bg-violet-500 hover:bg-violet-400' : isBlack ? 'bg-zinc-900 hover:bg-zinc-700' : 'bg-zinc-800 hover:bg-zinc-700',
                           (currentStep % sc) === si ? 'ring-1 ring-white/40' : '',
                           si % 4 === 0 && si !== 0 ? 'ml-1' : '',

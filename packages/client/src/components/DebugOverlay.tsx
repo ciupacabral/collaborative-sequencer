@@ -32,7 +32,7 @@ export function DebugOverlay({ ctx }: Props) {
   const fmt = (n: number | null, suffix = 'ms') => n === null ? '—' : `${n.toFixed(1)}${suffix}`
 
   return (
-    <div className="fixed bottom-2 right-2 w-72 p-2 bg-black/90 text-zinc-200 border border-zinc-700 rounded text-[11px] leading-tight font-mono z-50 space-y-1">
+    <div className="fixed bottom-2 right-2 w-64 sm:w-72 p-2 bg-black/90 text-zinc-200 border border-zinc-700 rounded text-[11px] leading-tight font-mono z-50 space-y-1">
       <div>
         LAT  p50 {fmt(p50)}  p95 {fmt(p95)}  p99 {fmt(p99)}
         <span className="text-zinc-500"> [n={syncSamples.length}]</span>
