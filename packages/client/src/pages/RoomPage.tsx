@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { YjsProvider, useYjs } from '../context/YjsContext'
 import { useSequencer } from '../hooks/useSequencer'
@@ -173,6 +173,9 @@ function SequencerShell({ roomId }: { roomId: string }) {
                   className={`text-xs px-2.5 py-1 rounded transition-colors ${track.muted ? 'bg-red-900 text-red-300' : 'bg-zinc-700 text-zinc-300'}`}>
                   {track.muted ? 'Muted' : 'Mute'}
                 </button>
+                <button onClick={() => mutations.duplicateTrack(idx)}
+                  title="Duplicate track"
+                  className="text-xs px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200 transition-colors">⎘</button>
                 <button onClick={() => mutations.removeTrack(idx)}
                   className="text-xs px-2.5 py-1 rounded bg-zinc-800 hover:bg-red-900 text-zinc-500 hover:text-red-300 transition-colors">✕</button>
               </div>
@@ -394,6 +397,8 @@ function DrumGrid({ track, trackIdx, currentStep }: { track: DrumTrack; trackIdx
 const PIANO_ROLL = [
   'C5','B4','A#4','A4','G#4','G4','F#4','F4','E4','D#4','D4','C#4','C4',
   'B3','A#3','A3','G#3','G3','F#3','F3','E3','D#3','D3','C#3','C3',
+  'B2','A#2','A2','G#2','G2','F#2','F2','E2','D#2','D2','C#2','C2',
+  'B1','A#1','A1',
 ]
 
 function MelodicGrid({ track, trackIdx, currentStep, previewNote }: {
@@ -404,6 +409,27 @@ function MelodicGrid({ track, trackIdx, currentStep, previewNote }: {
 }) {
   const { setMelodicStep, setMelodicPreset, setTrackParameter } = useSignaledMutations()
   const { setFocus } = useLocalFocus()
+  const pianoRollRef = useRef<HTMLDivElement | null>(null)
+  const ROW_HEIGHT_PX = 15
+
+  const shiftOctave = (delta: -1 | 1) => {
+    const el = pianoRollRef.current
+    if (!el) return
+    const next = el.scrollTop + delta * ROW_HEIGHT_PX * 12
+    el.scrollTo({ top: Math.max(0, Math.min(next, el.scrollHeight - el.clientHeight)), behavior: 'smooth' })
+  }
+
+  useEffect(() => {
+    const el = pianoRollRef.current
+    if (!el) return
+    const isBass = ['sub-bass', 'fat-bass', 'square-bass'].includes(track.parameters.preset)
+    const targetNote = isBass ? 'A2' : 'C4'
+    const rowIndex   = PIANO_ROLL.indexOf(targetNote)
+    if (rowIndex < 0) return
+    el.scrollTop = Math.max(0, rowIndex * ROW_HEIGHT_PX - 80)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [track.id])
+
   const p  = track.parameters
   const sc = p.stepCount
 
@@ -422,6 +448,13 @@ function MelodicGrid({ track, trackIdx, currentStep, previewNote }: {
 
       {/* Parameters */}
       <div className="flex flex-wrap gap-x-6 gap-y-2">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-zinc-500 w-14 shrink-0">Octave</span>
+          <div className="flex gap-1">
+            <button onClick={() => shiftOctave(-1)} className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors">−</button>
+            <button onClick={() => shiftOctave(+1)} className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors">+</button>
+          </div>
+        </div>
         <PeerOverlay addr={{ kind: 'param', trackId: track.id, key: 'stepCount' }}
           onMouseEnter={() => setFocus({ kind: 'param', trackId: track.id, key: 'stepCount' })}
           onMouseLeave={() => setFocus(null)}>
@@ -462,7 +495,8 @@ function MelodicGrid({ track, trackIdx, currentStep, previewNote }: {
       </div>
 
       {/* Piano roll — supports polyphony: multiple notes per column */}
-      <div className="space-y-px">
+      <div ref={pianoRollRef} className="max-h-[300px] overflow-y-auto pr-1 border border-zinc-800 rounded">
+        <div className="space-y-px">
         {PIANO_ROLL.map((note) => {
           const isBlack = note.includes('#')
           return (
@@ -496,6 +530,7 @@ function MelodicGrid({ track, trackIdx, currentStep, previewNote }: {
             </div>
           )
         })}
+        </div>
       </div>
     </div>
   )
