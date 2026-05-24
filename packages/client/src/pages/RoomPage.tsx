@@ -148,6 +148,7 @@ function SequencerShell({ roomId }: { roomId: string }) {
         <div className="flex gap-2 ml-auto">
           <button onClick={() => mutations.addDrumTrack()}    className="text-xs px-3 py-1.5 rounded bg-zinc-700 hover:bg-zinc-600 transition-colors">+ Drum</button>
           <button onClick={() => mutations.addMelodicTrack()} className="text-xs px-3 py-1.5 rounded bg-zinc-700 hover:bg-zinc-600 transition-colors">+ Melodic</button>
+          <button onClick={() => mutations.addBassTrack()}    className="text-xs px-3 py-1.5 rounded bg-zinc-700 hover:bg-zinc-600 transition-colors">+ Bass</button>
         </div>
       </div>
 
