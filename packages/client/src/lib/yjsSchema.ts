@@ -72,7 +72,7 @@ export function createDrumTrackYMap(id: string, name: string): YTrack {
   return track
 }
 
-export function createMelodicTrackYMap(id: string, name: string): YTrack {
+export function createMelodicTrackYMap(id: string, name: string, presetOverride?: MelodicPreset): YTrack {
   const track = new Y.Map() as YTrack
 
   track.set('id',    id)
@@ -80,20 +80,21 @@ export function createMelodicTrackYMap(id: string, name: string): YTrack {
   track.set('name',  name)
   track.set('muted', false)
 
-  // Each step is an empty Y.Map<boolean> — keys are note names, values are active flags.
-  // Polyphony is free: multiple keys can be set in the same step map.
   const steps = new Y.Array<Y.Map<boolean>>()
   steps.insert(0, Array.from({ length: MAX_STEP_COUNT }, () => new Y.Map<boolean>()))
   track.set('steps', steps)
 
+  const preset = presetOverride ?? 'sine-pad'
+  const p      = MELODIC_PRESETS[preset]
+
   const params = new Y.Map() as YParameters
-  params.set('oscillatorType', 'sine')
-  params.set('attack',         0.01)
-  params.set('decay',          0.1)
-  params.set('sustain',        0.5)
-  params.set('release',        0.5)
+  params.set('oscillatorType', p.oscillator.type)
+  params.set('attack',         p.envelope.attack)
+  params.set('decay',          p.envelope.decay)
+  params.set('sustain',        p.envelope.sustain)
+  params.set('release',        p.envelope.release)
   params.set('volume',         0)
-  params.set('preset',         'sine-pad')
+  params.set('preset',         preset)
   params.set('stepCount',      DEFAULT_STEP_COUNT)
   track.set('parameters', params)
 
