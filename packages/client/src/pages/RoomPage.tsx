@@ -507,7 +507,7 @@ function MelodicGrid({ track, trackIdx, currentStep, previewNote }: {
           const isBlack = note.includes('#')
           return (
             <div key={note} className="flex items-center gap-2">
-              <span className={`w-8 text-right text-xs shrink-0 ${isBlack ? 'text-zinc-700' : 'text-zinc-500'}`}>{note}</span>
+              <span className={`sticky left-0 z-10 bg-panel pr-1 w-8 text-right text-xs shrink-0 ${isBlack ? 'text-zinc-700' : 'text-zinc-500'}`}>{note}</span>
               <div className="flex gap-1">
                 {track.steps.slice(0, sc).map((step, si) => {
                   const lit = !!step[note]
