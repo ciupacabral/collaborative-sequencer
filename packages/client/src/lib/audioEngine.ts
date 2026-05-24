@@ -178,7 +178,7 @@ export class AudioEngine {
           if (!(lanes?.get(inst) as Y.Array<boolean> | undefined)?.get(localStep)) return
           if (inst === 'kick')  entry.kit.kick.triggerAttackRelease('C1', decay, time)
           if (inst === 'snare') entry.kit.snare.triggerAttackRelease(decay * 0.5, time)
-          if (inst === 'hihat') entry.kit.hihat.triggerAttackRelease(decay * 0.2, time)
+          if (inst === 'hihat') entry.kit.hihat.triggerAttackRelease(decay * 0.4, time)
         })
       }
 

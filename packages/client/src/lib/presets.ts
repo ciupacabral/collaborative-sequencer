@@ -13,9 +13,9 @@ export const SNARE_PRESETS = {
 }
 
 export const HIHAT_PRESETS = {
-  closed: { frequency: 120, harmonicity: 3.1, modulationIndex: 12, resonance: 1200, octaves: 0.5, envelope: { attack: 0.001, decay: 0.06, release: 0.01 } },
-  open:   { frequency: 120, harmonicity: 3.1, modulationIndex: 12, resonance: 1200, octaves: 0.5, envelope: { attack: 0.001, decay: 0.45, release: 0.1  } },
-  crispy: { frequency: 160, harmonicity: 4.5, modulationIndex: 20, resonance: 2000, octaves: 0.8, envelope: { attack: 0.001, decay: 0.09, release: 0.02 } },
+  closed: { frequency: 250, harmonicity: 5.1, modulationIndex: 32, resonance: 7000, octaves: 1.5, envelope: { attack: 0.001, decay: 0.08, release: 0.02 } },
+  open:   { frequency: 250, harmonicity: 5.1, modulationIndex: 32, resonance: 7000, octaves: 1.5, envelope: { attack: 0.001, decay: 0.45, release: 0.15 } },
+  crispy: { frequency: 350, harmonicity: 7.0, modulationIndex: 40, resonance: 9000, octaves: 2.0, envelope: { attack: 0.001, decay: 0.10, release: 0.03 } },
 }
 
 // ─── Melodic presets ──────────────────────────────────────────────────────────
@@ -26,6 +26,9 @@ export const MELODIC_PRESETS = {
   'saw-bass':    { oscillator: { type: 'sawtooth'    }, envelope: { attack: 0.01,  decay: 0.2, sustain: 0.4, release: 0.2 } },
   'tri-bell':    { oscillator: { type: 'triangle'    }, envelope: { attack: 0.001, decay: 0.5, sustain: 0,   release: 0.5 } },
   'fat-saw':     { oscillator: { type: 'fatsawtooth' }, envelope: { attack: 0.02,  decay: 0.3, sustain: 0.5, release: 0.4 } },
+  'sub-bass':    { oscillator: { type: 'sine'        }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.7, release: 0.4 } },
+  'fat-bass':    { oscillator: { type: 'fatsawtooth' }, envelope: { attack: 0.005, decay: 0.3, sustain: 0.6, release: 0.3 } },
+  'square-bass': { oscillator: { type: 'square'      }, envelope: { attack: 0.005, decay: 0.25, sustain: 0.5, release: 0.25 } },
 }
 
 // ─── Types & keys ─────────────────────────────────────────────────────────────
