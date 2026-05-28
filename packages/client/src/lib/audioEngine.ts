@@ -8,7 +8,7 @@ import {
 } from './presets'
 import type { AudioSample } from './measurements'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// tipuri interne
 
 type DrumKit = {
   kick:  Tone.MembraneSynth
@@ -20,13 +20,13 @@ type Entry =
   | { type: 'drum';    kit:  DrumKit;        ch: Tone.Channel }
   | { type: 'melodic'; poly: Tone.PolySynth; ch: Tone.Channel }
 
-// ─── Drum instrument factories ────────────────────────────────────────────────
+// fabrici pentru instrumentele de tobe
 
 const mkKick  = (p: KickPreset,  ch: Tone.Channel) => new Tone.MembraneSynth({ ...KICK_PRESETS[p]  }).connect(ch)
 const mkSnare = (p: SnarePreset, ch: Tone.Channel) => new Tone.NoiseSynth({   ...SNARE_PRESETS[p] }).connect(ch)
 const mkHihat = (p: HihatPreset, ch: Tone.Channel) => new Tone.MetalSynth({   ...HIHAT_PRESETS[p] }).connect(ch)
 
-// ─── Engine ───────────────────────────────────────────────────────────────────
+// motorul audio
 
 export class AudioEngine {
   onStep?: (step: number) => void
@@ -47,12 +47,12 @@ export class AudioEngine {
     this.ydoc = ydoc
     ydoc.getMap('sequencer').observe(this.onRootChange)
     this.tryObserveTracks()
-    // Always sequence MAX_STEP_COUNT steps; each track reads its own stepCount via modulo.
+    // se programeaza mereu MAX_STEP_COUNT pasi; fiecare track isi ia propriul stepCount prin modulo
     this.seq = new Tone.Sequence(this.tick, [...Array(MAX_STEP_COUNT).keys()], '16n')
     this.seq.start(0)
   }
 
-  // ── Instrument lifecycle ───────────────────────────────────────────────────
+  // ciclul de viata al instrumentelor
 
   private tryObserveTracks() {
     const yTracks = this.ydoc.getMap('sequencer').get('tracks') as Y.Array<YTrack> | undefined
@@ -130,13 +130,13 @@ export class AudioEngine {
 
       const newOscType = (p.get('oscillatorType') as string) ?? 'sine'
       if (newOscType !== prevOscType) {
-        // Recreate PolySynth — calling set() for oscillator type is unreliable
+        // recreaza PolySynth-ul; set() pe tipul de oscilator nu e de incredere
         entry.poly.releaseAll(); entry.poly.dispose()
         entry.poly = buildPoly(newOscType)
         prevOscType = newOscType
       }
 
-      // Always sync envelope (safe to call set() for these)
+      // anvelopa se poate sincroniza mereu cu set() (e sigur aici)
       entry.poly.set({ envelope: {
         attack:  (p.get('attack')  as number) ?? 0.01,
         decay:   (p.get('decay')   as number) ?? 0.1,
@@ -146,7 +146,7 @@ export class AudioEngine {
     })
   }
 
-  // ── Preview ────────────────────────────────────────────────────────────────
+  // preview de nota (la click pe pian)
 
   previewNote(trackId: string, note: string) {
     const entry = this.map.get(trackId)
@@ -154,7 +154,7 @@ export class AudioEngine {
     entry.poly.triggerAttackRelease(note, '8n')
   }
 
-  // ── Scheduler ─────────────────────────────────────────────────────────────
+  // scheduler-ul: la fiecare tick citeste direct din Y.Doc
 
   private tick = (time: number, step: number) => {
     Tone.getDraw().schedule(() => this.onStep?.(step), time)
@@ -169,7 +169,7 @@ export class AudioEngine {
 
       const p          = t.get('parameters') as Y.Map<unknown> | undefined
       const stepCount  = (p?.get('stepCount') as number) ?? DEFAULT_STEP_COUNT
-      const localStep  = step % stepCount   // per-track loop length via modulo
+      const localStep  = step % stepCount   // lungimea buclei per track, prin modulo
 
       if (type === 'drum' && entry.type === 'drum') {
         const lanes = t.get('lanes') as YLanes | undefined
@@ -185,7 +185,7 @@ export class AudioEngine {
       if (type === 'melodic' && entry.type === 'melodic') {
         const steps = t.get('steps') as YSteps | undefined
         const yStep = steps?.get(localStep) as Y.Map<boolean> | undefined
-        // Polyphony: every note key set to true in this step fires simultaneously.
+        // polifonie: toate notele active in pasul asta pornesc simultan
         yStep?.forEach((active, note) => {
           if (active) entry.poly.triggerAttackRelease(note, '8n', time)
         })
@@ -210,7 +210,7 @@ export class AudioEngine {
     }
   }
 
-  // ── Root map observer ──────────────────────────────────────────────────────
+  // observer pe map-ul root (track-uri noi sau schimbare de tempo)
 
   private onRootChange = (event: Y.YMapEvent<unknown>) => {
     if (event.keysChanged.has('tracks')) this.tryObserveTracks()
@@ -220,13 +220,13 @@ export class AudioEngine {
     }
   }
 
-  // ── Transport ──────────────────────────────────────────────────────────────
+  // transport: play/stop, local pentru fiecare client
 
   async start() { await Tone.start(); Tone.getTransport().start() }
   stop()        { Tone.getTransport().stop(); Tone.getTransport().position = 0 }
   get playing() { return Tone.getTransport().state === 'started' }
 
-  // ── Cleanup ────────────────────────────────────────────────────────────────
+  // curatenie la dispose
 
   private disposeEntry(e: Entry) {
     if (e.type === 'drum') { e.kit.kick.dispose(); e.kit.snare.dispose(); e.kit.hihat.dispose() }

@@ -5,8 +5,7 @@ import { setupWSConnection } from 'y-websocket/bin/utils'
 const HOST = process.env.HOST ?? '0.0.0.0'
 const PORT = parseInt(process.env.PORT ?? '1234', 10)
 
-// ─── HTTP server ──────────────────────────────────────────────────────────────
-// Render.com expects an HTTP server for health probes, even for WS-only services.
+// server http: Render are nevoie de un endpoint http pentru health, chiar daca serviciul e doar WS
 const server = http.createServer((req, res) => {
   if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'text/plain' })
@@ -17,31 +16,31 @@ const server = http.createServer((req, res) => {
   res.end()
 })
 
-// ─── WebSocket server ─────────────────────────────────────────────────────────
+// server websocket
 const wss = new WebSocketServer({ server })
 
 wss.on('connection', (ws, req) => {
-  // req.url will be "/<roomId>" e.g. "/xyz-123"
-  // y-websocket uses this as the Y.Doc name — one isolated document per room.
+  // req.url e de forma "/<roomId>", ex. "/xyz-123".
+  // y-websocket il foloseste ca nume de Y.Doc: un document izolat per camera.
   setupWSConnection(ws, req, {
-    gc: true, // enable garbage collection for deleted items
+    gc: true, // garbage collection pentru elementele sterse
   })
 
   ws.on('error', (err) => {
-    // Swallow benign client-disconnect errors to prevent server crashes
+    // ignora erorile benigne de deconectare a clientului, ca sa nu pice serverul
     if (!['ECONNRESET', 'EPIPE'].includes(err.code ?? '')) {
       console.error('[ws error]', err)
     }
   })
 })
 
-// ─── Startup ──────────────────────────────────────────────────────────────────
+// pornire
 server.listen(PORT, HOST, () => {
   console.log(`[y-websocket] listening on ws://${HOST}:${PORT}`)
   console.log('[y-websocket] documents are stored in memory (ephemeral)')
 })
 
-// ─── Graceful shutdown ────────────────────────────────────────────────────────
+// oprire curata
 const shutdown = () => {
   console.log('[y-websocket] shutting down...')
   wss.close(() => server.close(() => process.exit(0)))

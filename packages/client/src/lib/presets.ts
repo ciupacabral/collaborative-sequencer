@@ -1,4 +1,4 @@
-// ─── Drum presets ─────────────────────────────────────────────────────────────
+// preset-uri de tobe
 
 export const KICK_PRESETS = {
   punchy: { pitchDecay: 0.05, octaves: 6, envelope: { attack: 0.001, decay: 0.3,  sustain: 0, release: 0.1  } },
@@ -18,7 +18,7 @@ export const HIHAT_PRESETS = {
   crispy: { frequency: 350, harmonicity: 7.0, modulationIndex: 40, resonance: 9000, octaves: 2.0, envelope: { attack: 0.001, decay: 0.10, release: 0.03 } },
 }
 
-// ─── Melodic presets ──────────────────────────────────────────────────────────
+// preset-uri melodice
 
 export const MELODIC_PRESETS = {
   'sine-pad':    { oscillator: { type: 'sine'        }, envelope: { attack: 0.1,   decay: 0.2, sustain: 0.8, release: 1.0 } },
@@ -31,7 +31,7 @@ export const MELODIC_PRESETS = {
   'square-bass': { oscillator: { type: 'square'      }, envelope: { attack: 0.005, decay: 0.25, sustain: 0.5, release: 0.25 } },
 }
 
-// ─── Types & keys ─────────────────────────────────────────────────────────────
+// tipuri si chei
 
 export type KickPreset    = keyof typeof KICK_PRESETS
 export type SnarePreset   = keyof typeof SNARE_PRESETS

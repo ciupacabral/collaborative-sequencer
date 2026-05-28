@@ -2,9 +2,8 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 
-// StrictMode is intentionally omitted.
-// y-websocket's WebsocketProvider is a non-idempotent resource:
-// it opens a WebSocket on construction and cannot survive React's
-// development-mode double-mount. This is an architectural constraint
-// of integrating imperative audio/network resources into React.
+// StrictMode e omis intentionat.
+// WebsocketProvider din y-websocket nu e idempotent: deschide un WebSocket
+// la construire si nu supravietuieste dublu-mount-ului din modul development.
+// e o constrangere de integrare a resurselor imperative (audio/retea) in React.
 createRoot(document.getElementById('root')!).render(<App />)

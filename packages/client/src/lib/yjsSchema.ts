@@ -13,26 +13,22 @@ import {
 } from '../types/sequencer'
 import { MELODIC_PRESETS, type MelodicPreset } from './presets'
 
-// ─── Y.js type aliases (documentation only — Y.js is dynamically typed) ───────
-
+// yjs e netipat la runtime; alias-urile servesc doar la tiparea TS
 export type YSequencerRoot = Y.Map<unknown>
 export type YTrack         = Y.Map<unknown>
 export type YLanes         = Y.Map<Y.Array<boolean>>
 export type YSteps         = Y.Array<Y.Map<boolean>>
 export type YParameters    = Y.Map<unknown>
 
-// ─── Root accessor ────────────────────────────────────────────────────────────
-
+// acces rapid la map-ul root si la lista de track-uri
 export const getRoot = (ydoc: Y.Doc): YSequencerRoot =>
   ydoc.getMap('sequencer')
 
 export const getYTracks = (ydoc: Y.Doc): Y.Array<YTrack> =>
   getRoot(ydoc).get('tracks') as Y.Array<YTrack>
 
-// ─── Initialization ───────────────────────────────────────────────────────────
-// Called once the WebSocket provider reports sync=true.
-// Idempotent: only sets keys that don't yet exist, so late-joining peers skip it.
-
+// se apeleaza o singura data, dupa ce provider-ul raporteaza sincronizarea.
+// guard-urile cu has() sunt necesare: un peer care intra mai tarziu nu trebuie sa suprascrie starea existenta
 export function initSequencer(ydoc: Y.Doc, initialTempo = 120, sessionName = 'Untitled Session'): void {
   const root = getRoot(ydoc)
   ydoc.transact(() => {
@@ -42,8 +38,7 @@ export function initSequencer(ydoc: Y.Doc, initialTempo = 120, sessionName = 'Un
   })
 }
 
-// ─── Track factories ──────────────────────────────────────────────────────────
-
+// construieste un track nou ca Y.Map; intai cel de tobe, melodic mai jos
 export function createDrumTrackYMap(id: string, name: string): YTrack {
   const track = new Y.Map() as YTrack
 
@@ -101,10 +96,8 @@ export function createMelodicTrackYMap(id: string, name: string, presetOverride?
   return track
 }
 
-// ─── Snapshot: Y.js → plain JS ────────────────────────────────────────────────
-// Produces a new immutable object tree for React to diff.
-// Called inside useSyncExternalStore's getSnapshot — must be pure and fast.
-
+// converteste Y.Doc-ul intr-un obiect JS simplu, comparabil de catre React.
+// ruleaza in getSnapshot (useSyncExternalStore), deci trebuie sa fie pur si rapid
 export function snapshotSequencer(ydoc: Y.Doc): SequencerSnapshot {
   const root    = getRoot(ydoc)
   const tempo   = (root.get('tempo') as number | undefined) ?? 120
@@ -151,7 +144,7 @@ function snapshotTrack(yTrack: YTrack): Track | null {
 
   if (type === 'melodic') {
     const ySteps = yTrack.get('steps') as YSteps
-    // Each step is a Y.Map<boolean> where keys = note names, values = active.
+    // fiecare pas e un map nume_nota -> activ/inactiv
     const steps: MelodicStep[] = ySteps.map((yStep) =>
       Object.fromEntries(yStep.entries()) as MelodicStep
     )
@@ -173,10 +166,8 @@ function snapshotTrack(yTrack: YTrack): Track | null {
   return null
 }
 
-// ─── Mutation helpers ─────────────────────────────────────────────────────────
-// All mutations are wrapped in ydoc.transact() — batches ops into one network
-// message and one observer notification.
-
+// tot ce urmeaza scrie prin transact(): un singur update pe retea
+// si o singura notificare a observer-ului, nu una per operatie
 export function setTempo(ydoc: Y.Doc, bpm: number): void {
   ydoc.transact(() => getRoot(ydoc).set('tempo', bpm))
 }
@@ -238,11 +229,9 @@ export function duplicateTrack(ydoc: Y.Doc, trackIndex: number, newId: string): 
   })
 }
 
-/**
- * Toggle a single drum step.
- * Y.Array has no .set(index, val) — the correct pattern is delete + re-insert.
- * Wrapped in a transaction so it is atomic across the network.
- */
+// comuta un singur pas de toba.
+// atentie: Y.Array nu are .set(i, val), deci se sterge slotul si se insereaza valoarea noua.
+// ambele in aceeasi tranzactie, altfel s-ar propaga momentan un array cu o celula lipsa
 export function toggleDrumStep(
   ydoc:        Y.Doc,
   trackIndex:  number,
@@ -259,11 +248,9 @@ export function toggleDrumStep(
   })
 }
 
-/**
- * Toggle a note in a melodic step.
- * The step is a Y.Map<boolean> (note → active). Setting active=false removes the key.
- * Multiple notes per step are fully supported — polyphony is a free consequence.
- */
+// adauga sau scoate o nota dintr-un pas melodic.
+// pasul e un Y.Map<boolean> (nota -> activ); dezactivarea unei note sterge cheia.
+// mai multe note pot sta pe acelasi pas, deci polifonia rezulta natural
 export function setMelodicStep(
   ydoc:       Y.Doc,
   trackIndex: number,
@@ -305,8 +292,8 @@ export function setTrackName(ydoc: Y.Doc, trackIndex: number, name: string): voi
   })
 }
 
-/** Sets the melodic preset AND cascades its envelope/oscillator values into Y.js,
- *  so individual sliders stay in sync and the audio engine only watches scalar params. */
+// alegerea unui preset scrie si valorile de oscilator/anvelopa in yjs,
+// ca slider-ele sa ramana sincronizate iar engine-ul audio sa citeasca doar numere
 export function setMelodicPreset(ydoc: Y.Doc, trackIndex: number, preset: MelodicPreset): void {
   const p = MELODIC_PRESETS[preset]
   ydoc.transact(() => {

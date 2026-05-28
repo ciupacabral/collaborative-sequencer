@@ -10,7 +10,7 @@ import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
 import { initSequencer } from '../lib/yjsSchema'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// tipuri
 
 export type SyncStatus = 'connecting' | 'connected' | 'disconnected'
 
@@ -20,7 +20,7 @@ interface YjsContextValue {
   provider: WebsocketProvider | null
 }
 
-// ─── Context ──────────────────────────────────────────────────────────────────
+// context-ul + hook-ul de acces
 
 const YjsContext = createContext<YjsContextValue | null>(null)
 
@@ -30,7 +30,7 @@ export function useYjs(): YjsContextValue {
   return ctx
 }
 
-// ─── Provider ─────────────────────────────────────────────────────────────────
+// provider-ul: creeaza Y.Doc-ul si conexiunea websocket
 
 interface Props {
   roomId:   string
@@ -38,9 +38,9 @@ interface Props {
 }
 
 export function YjsProvider({ roomId, children }: Props) {
-  // useRef creates the Y.Doc once per component mount.
-  // Room changes are handled by the parent passing key={roomId},
-  // which forces a full unmount → remount cycle (new Y.Doc, new provider).
+  // useRef creeaza Y.Doc-ul o singura data per mount.
+  // schimbarea de camera e tratata de parinte prin key={roomId}, care forteaza
+  // un ciclu complet unmount -> remount (Y.Doc nou, provider nou).
   const ydocRef = useRef(new Y.Doc())
   const [status,   setStatus]   = useState<SyncStatus>('connecting')
   const [provider, setProvider] = useState<WebsocketProvider | null>(null)
@@ -55,9 +55,9 @@ export function YjsProvider({ roomId, children }: Props) {
     const handleStatus = ({ status }: { status: string }) =>
       setStatus(status as SyncStatus)
 
-    // 'sync' fires once the server has sent us the full document state.
-    // initSequencer is idempotent: only sets keys that don't yet exist,
-    // so late-joining peers skip it and receive the existing state.
+    // 'sync' se declanseaza dupa ce serverul a trimis toata starea documentului.
+    // initSequencer e idempotent: seteaza doar cheile inexistente, asa ca un peer
+    // care intra mai tarziu il sare si primeste starea deja existenta.
     const handleSync = (isSynced: boolean) => {
       if (isSynced) initSequencer(ydoc)
     }

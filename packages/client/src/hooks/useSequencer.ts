@@ -3,19 +3,16 @@ import { useYjs } from '../context/YjsContext'
 import { snapshotSequencer } from '../lib/yjsSchema'
 import type { SequencerSnapshot } from '../types/sequencer'
 
-/**
- * Subscribes to the Y.js document and returns a plain-JS snapshot of the
- * full sequencer state. Re-renders only when Y.js emits an update.
- *
- * Architecture note:
- * - React state = read-only projection of Y.js truth
- * - Tone.js will read from Y.js directly (bypassing React) for scheduling
- * - This hook is the only bridge from Y.js into the React render tree
- *
- * The snapshot cache is required by useSyncExternalStore: consecutive
- * getSnapshot() calls must return the same reference when no store update
- * occurred in between. Without this, React would re-render on every call.
- */
+// se aboneaza la Y.Doc si intoarce un snapshot JS al intregii stari.
+// re-randeaza doar cand yjs emite un update.
+//
+// ideea de arhitectura: starea React e doar o proiectie read-only a starii din yjs;
+// Tone.js citeste direct din yjs (ocolind React) pentru scheduling, iar hook-ul asta
+// e singura punte dinspre yjs spre arborele de randare React.
+//
+// cache-ul de snapshot e cerut de useSyncExternalStore: doua apeluri getSnapshot()
+// consecutive trebuie sa intoarca aceeasi referinta daca nu a fost niciun update intre ele,
+// altfel React ar re-randa la fiecare apel.
 export function useSequencer(): SequencerSnapshot {
   const { ydoc } = useYjs()
 

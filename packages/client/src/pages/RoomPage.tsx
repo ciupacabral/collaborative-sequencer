@@ -19,7 +19,7 @@ import {
   type MelodicPreset,
 } from '../lib/presets'
 
-// ─── Room entry ───────────────────────────────────────────────────────────────
+// intrarea in camera
 
 export function RoomPage() {
   const { roomId } = useParams<{ roomId: string }>()
@@ -33,7 +33,7 @@ export function RoomPage() {
   )
 }
 
-// ─── Shell ────────────────────────────────────────────────────────────────────
+// shell-ul paginii: leaga starea, audio si prezenta
 
 function SequencerShell({ roomId }: { roomId: string }) {
   const navigate                              = useNavigate()
@@ -54,7 +54,7 @@ function SequencerShell({ roomId }: { roomId: string }) {
   const [bpmInput, setBpmInput]               = useState<string>('')
   const [qrOpen, setQrOpen]                   = useState(false)
 
-  // Keep localStorage in sync with session name from Y.js
+  // tine localStorage sincronizat cu numele sesiunii din yjs
   useEffect(() => {
     upsertSession({ id: roomId, name: state.name, lastVisited: Date.now() })
     updateSessionName(roomId, state.name)
@@ -81,7 +81,7 @@ function SequencerShell({ roomId }: { roomId: string }) {
   return (
     <div className="min-h-screen bg-surface text-white font-mono p-6 space-y-4">
 
-      {/* Header */}
+      {/* header */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <button onClick={() => navigate('/')} className="text-zinc-500 hover:text-white transition-colors text-xs shrink-0">← Home</button>
@@ -94,7 +94,7 @@ function SequencerShell({ roomId }: { roomId: string }) {
           </PeerOverlay>
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          {/* Presence avatars */}
+          {/* avatare de prezenta */}
           <div className="flex items-center gap-1">
             {peers.map((p) => (
               <div key={p.clientID} title={p.name + (p.self ? ' (you)' : '')}
@@ -109,7 +109,7 @@ function SequencerShell({ roomId }: { roomId: string }) {
         </div>
       </div>
 
-      {/* Transport */}
+      {/* transport */}
       <div className="bg-panel border border-border rounded-lg p-4 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4">
         <button onClick={toggle} disabled={status !== 'connected'}
           className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors shrink-0 ${
@@ -157,11 +157,11 @@ function SequencerShell({ roomId }: { roomId: string }) {
         </div>
       </div>
 
-      {/* Tracks */}
+      {/* track-uri */}
       <div className="space-y-4">
         {state.tracks.map((track, idx) => (
           <div key={track.id} className="bg-panel border border-border rounded-lg p-4">
-            {/* Track header */}
+            {/* antetul track-ului */}
             <div className="flex items-start gap-3 mb-4">
               <div className="flex flex-col shrink-0">
                 <span className="text-xs uppercase tracking-widest text-zinc-600">{track.type}</span>
@@ -207,7 +207,7 @@ function SequencerShell({ roomId }: { roomId: string }) {
   )
 }
 
-// ─── Session name editor ──────────────────────────────────────────────────────
+// editor pentru numele sesiunii
 
 function SessionNameEditor({ name, onSave }: { name: string; onSave: (n: string) => void }) {
   const [editing, setEditing] = useState(false)
@@ -238,7 +238,7 @@ function SessionNameEditor({ name, onSave }: { name: string; onSave: (n: string)
   )
 }
 
-// ─── Inline track name editor ─────────────────────────────────────────────────
+// editor inline pentru numele track-ului
 
 function TrackNameEditor({ name, trackIdx }: { name: string; trackIdx: number }) {
   const { setTrackName }      = useSignaledMutations()
@@ -270,7 +270,7 @@ function TrackNameEditor({ name, trackIdx }: { name: string; trackIdx: number })
   )
 }
 
-// ─── Shared UI primitives ─────────────────────────────────────────────────────
+// componente UI reutilizabile
 
 function ParamSlider({ label, min, max, step = 0.001, value, onChange, fmt }: {
   label: string; min: number; max: number; step?: number
@@ -322,7 +322,7 @@ function StepCountPicker({ value, onChange }: { value: number; onChange: (v: num
   )
 }
 
-// ─── Drum grid + params ───────────────────────────────────────────────────────
+// grid-ul de tobe + parametrii
 
 function DrumGrid({ track, trackIdx, currentStep }: { track: DrumTrack; trackIdx: number; currentStep: number }) {
   const { toggleDrumStep, setTrackParameter } = useSignaledMutations()
@@ -398,7 +398,7 @@ function DrumGrid({ track, trackIdx, currentStep }: { track: DrumTrack; trackIdx
   )
 }
 
-// ─── Melodic grid + params ────────────────────────────────────────────────────
+// grid-ul melodic + parametrii
 
 const PIANO_ROLL = [
   'C5','B4','A#4','A4','G#4','G4','F#4','F4','E4','D#4','D4','C#4','C4',
@@ -441,7 +441,7 @@ function MelodicGrid({ track, trackIdx, currentStep, previewNote }: {
 
   return (
     <div className="space-y-3">
-      {/* Sound preset */}
+      {/* preset de sunet */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs text-zinc-500 w-14 shrink-0">Sound</span>
         <PeerOverlay addr={{ kind: 'param', trackId: track.id, key: 'preset' }}
@@ -452,7 +452,7 @@ function MelodicGrid({ track, trackIdx, currentStep, previewNote }: {
         </PeerOverlay>
       </div>
 
-      {/* Parameters */}
+      {/* parametri */}
       <div className="flex flex-wrap gap-x-6 gap-y-2">
         <div className="flex items-center gap-2">
           <span className="text-xs text-zinc-500 w-14 shrink-0">Octave</span>
@@ -493,14 +493,14 @@ function MelodicGrid({ track, trackIdx, currentStep, previewNote }: {
         </PeerOverlay>
       </div>
 
-      {/* Playhead row */}
+      {/* randul cu playhead-ul */}
       <div className="flex gap-1 pl-10 border-t border-border pt-3">
         {Array.from({ length: sc }, (_, i) => (
           <div key={i} className={`w-7 h-1 rounded-sm transition-colors ${(currentStep % sc) === i ? 'bg-white/50' : 'bg-transparent'} ${i % 4 === 0 && i !== 0 ? 'ml-1' : ''}`} />
         ))}
       </div>
 
-      {/* Piano roll — supports polyphony: multiple notes per column */}
+      {/* piano roll: suporta polifonie, mai multe note pe aceeasi coloana */}
       <div ref={pianoRollRef} className="max-h-[300px] overflow-auto pr-1 border border-zinc-800 rounded">
         <div className="space-y-px">
         {PIANO_ROLL.map((note) => {
