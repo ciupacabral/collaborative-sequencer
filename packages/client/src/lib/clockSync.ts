@@ -3,6 +3,8 @@ import type { Awareness } from 'y-protocols/awareness'
 const ROUND_TRIPS_AT_START = 5
 const PROBE_SPACING_MS     = 200
 const REFRESH_INTERVAL_MS  = 30_000
+// reincercare rapida cat timp un peer inca nu are offset (retea lenta, server abia trezit)
+const RETRY_INTERVAL_MS    = 3_000
 
 export interface PeerOffset {
   offset_ms:     number
@@ -23,6 +25,7 @@ export class ClockSync {
   private inflight     = new Map<number, { target: number; t1: number; resolve: (rttOffset: { rtt: number; offset: number }) => void }>()
   private syncing      = new Set<number>()
   private refreshTimer: number | null = null
+  private retryTimer:   number | null = null
   private observers    = new Set<() => void>()
 
   constructor(awareness: Awareness) {
@@ -33,15 +36,26 @@ export class ClockSync {
   start(): void {
     this.awareness.on('change', this.onAwarenessChange)
     this.refreshTimer = window.setInterval(() => this.refreshAll(), REFRESH_INTERVAL_MS)
+    // peers fara offset sunt reincercati periodic, ca sa nu ramana blocat
+    // pe "syncing" daca awareness nu mai emite niciun change
+    this.retryTimer = window.setInterval(this.retryUnsynced, RETRY_INTERVAL_MS)
     void this.syncAllPeers()
   }
 
   stop(): void {
     this.awareness.off('change', this.onAwarenessChange)
     if (this.refreshTimer !== null) clearInterval(this.refreshTimer)
+    if (this.retryTimer !== null) clearInterval(this.retryTimer)
     this.refreshTimer = null
+    this.retryTimer = null
     this.awareness.setLocalStateField('clockProbe', null)
     this.awareness.setLocalStateField('clockReply', null)
+  }
+
+  private retryUnsynced = (): void => {
+    for (const peer of this.remotePeerIDs()) {
+      if (!this.offsets.has(peer)) void this.syncPeer(peer)
+    }
   }
 
   subscribe(fn: () => void): () => void {
@@ -62,7 +76,8 @@ export class ClockSync {
   }
 
   private async refreshAll(): Promise<void> {
-    for (const peer of this.remotePeerIDs()) await this.singleProbe(peer).catch(() => null)
+    // re-sincronizeaza fiecare peer (rafineaza offset-ul existent si recupereaza daca lipseste)
+    for (const peer of this.remotePeerIDs()) await this.syncPeer(peer)
   }
 
   private async syncPeer(peer: number): Promise<void> {
@@ -73,9 +88,12 @@ export class ClockSync {
       for (let i = 0; i < ROUND_TRIPS_AT_START; i++) {
         try {
           samples.push(await this.singleProbe(peer))
-        } catch { return }
+        } catch {
+          // proba pierduta (timeout) nu opreste sincronizarea; se foloseste ce reuseste
+        }
         await new Promise((r) => setTimeout(r, PROBE_SPACING_MS))
       }
+      // offset-ul se seteaza daca a reusit cel putin o proba; nu mai e all-or-nothing
       if (samples.length === 0) return
       const sorted = [...samples].sort((a, b) => a.offset - b.offset)
       const median = sorted[Math.floor(sorted.length / 2)]
