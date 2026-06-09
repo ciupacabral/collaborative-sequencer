@@ -33,7 +33,8 @@ export class AudioEngine {
 
   private ydoc:            Y.Doc
   private map            = new Map<string, Entry>()
-  private seq:             Tone.Sequence<number>
+  private seq:             Tone.Sequence<number> | null = null
+  private started         = false
   private observingTracks = false
   private measureSink:     ((s: AudioSample) => void) | null = null
   private prevTickTime:    number | null = null
@@ -45,7 +46,16 @@ export class AudioEngine {
 
   constructor(ydoc: Y.Doc) {
     this.ydoc = ydoc
+    // aici se observa doar Y.Doc-ul; orice atingere a Tone (context audio, instrumente,
+    // secventa) e amanata pana la primul start(), ca AudioContext-ul sa nu fie creat
+    // inainte de un gest al utilizatorului (politica de autoplay a browserului)
     ydoc.getMap('sequencer').observe(this.onRootChange)
+  }
+
+  // se ruleaza o singura data, la primul start(): construieste graficul audio
+  private initAudio() {
+    if (this.started) return
+    this.started = true
     this.tryObserveTracks()
     // se programeaza mereu MAX_STEP_COUNT pasi; fiecare track isi ia propriul stepCount prin modulo
     this.seq = new Tone.Sequence(this.tick, [...Array(MAX_STEP_COUNT).keys()], '16n')
@@ -213,6 +223,8 @@ export class AudioEngine {
   // observer pe map-ul root (track-uri noi sau schimbare de tempo)
 
   private onRootChange = (event: Y.YMapEvent<unknown>) => {
+    // inainte de primul start nu se atinge Tone; initAudio() sincronizeaza starea curenta
+    if (!this.started) return
     if (event.keysChanged.has('tracks')) this.tryObserveTracks()
     if (event.keysChanged.has('tempo')) {
       const bpm = this.ydoc.getMap('sequencer').get('tempo') as number | undefined
@@ -222,9 +234,11 @@ export class AudioEngine {
 
   // transport: play/stop, local pentru fiecare client
 
-  async start() { await Tone.start(); Tone.getTransport().start() }
-  stop()        { Tone.getTransport().stop(); Tone.getTransport().position = 0 }
-  get playing() { return Tone.getTransport().state === 'started' }
+  // prevTickTime se reseteaza la fiecare pornire/oprire, ca pauza dintre sesiuni
+  // sa nu fie masurata drept jitter (delta peste gap ar fi enorm)
+  async start() { await Tone.start(); this.initAudio(); this.prevTickTime = null; Tone.getTransport().start() }
+  stop()        { if (!this.started) return; Tone.getTransport().stop(); Tone.getTransport().position = 0; this.prevTickTime = null }
+  get playing() { return this.started && Tone.getTransport().state === 'started' }
 
   // curatenie la dispose
 
@@ -238,10 +252,13 @@ export class AudioEngine {
     const yTracks = this.ydoc.getMap('sequencer').get('tracks') as Y.Array<YTrack> | undefined
     if (this.observingTracks) yTracks?.unobserve(this.syncAll)
     this.ydoc.getMap('sequencer').unobserve(this.onRootChange)
-    this.seq.dispose()
+    this.seq?.dispose()
     this.map.forEach((e) => this.disposeEntry(e))
     this.map.clear()
-    Tone.getTransport().stop()
-    Tone.getTransport().position = 0
+    // contextul audio se atinge doar daca a fost initializat (s-a apasat Play macar o data)
+    if (this.started) {
+      Tone.getTransport().stop()
+      Tone.getTransport().position = 0
+    }
   }
 }
