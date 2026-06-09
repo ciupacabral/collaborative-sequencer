@@ -5,6 +5,9 @@ import { ClockSync, type PeerOffset } from '../lib/clockSync'
 import { MeasurementsStore, type AudioSample } from '../lib/measurements'
 
 const PROBE_INTERVAL_MS = 1000
+// latentele peste acest prag nu sunt retea, ci artefacte de strangulare a timer-elor
+// cand un tab a stat in fundal; se ignora la inregistrare
+const MAX_PLAUSIBLE_LATENCY_MS = 5000
 
 export interface MeasurementsContextValue {
   store:     MeasurementsStore
@@ -38,7 +41,14 @@ export function useMeasurements(args: UseMeasurementsArgs): MeasurementsContextV
     const unsubStore = store.subscribe(() => force((n) => n + 1))
     const unsubSync  = clockSync.subscribe(() => force((n) => n + 1))
 
-    attachAudioSink((s) => store.pushAudio(s))
+    // la revenirea in foreground, primele sample-uri sunt corupte (timere strangulate,
+    // probe vechi) - se ignora un scurt interval ca sa nu apara latente/jitter fictive
+    let suppressUntil = 0
+    const isSuppressed = () => document.hidden || Date.now() < suppressUntil
+    const onVisibility = () => { if (!document.hidden) suppressUntil = Date.now() + 1500 }
+    document.addEventListener('visibilitychange', onVisibility)
+
+    attachAudioSink((s) => { if (!isSuppressed()) store.pushAudio(s) })
 
     const telemetry = ydoc.getMap('_telemetry') as Y.Map<unknown>
     let probeCounter = 0
@@ -67,12 +77,14 @@ export function useMeasurements(args: UseMeasurementsArgs): MeasurementsContextV
     const probeTimer = window.setInterval(sendProbe, PROBE_INTERVAL_MS)
 
     const onTelemetryChange = () => {
+      if (isSuppressed()) return
       const probe = telemetry.get('probe') as { sender: number; counter: number; at: number } | undefined
       if (!probe) return
       if (probe.sender === provider.awareness.clientID) return
       const peerOffset = clockSync.offsets.get(probe.sender)
       if (!peerOffset) return
       const latency = (Date.now() + peerOffset.offset_ms) - probe.at
+      if (Math.abs(latency) > MAX_PLAUSIBLE_LATENCY_MS) return
       store.pushSync({
         counter:    probe.counter,
         sender:     probe.sender,
@@ -87,6 +99,7 @@ export function useMeasurements(args: UseMeasurementsArgs): MeasurementsContextV
 
     return () => {
       clearInterval(probeTimer)
+      document.removeEventListener('visibilitychange', onVisibility)
       telemetry.unobserve(onTelemetryChange)
       attachAudioSink(null)
       unsubStore()

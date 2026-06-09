@@ -37,11 +37,11 @@ export class AudioEngine {
   private started         = false
   private observingTracks = false
   private measureSink:     ((s: AudioSample) => void) | null = null
-  private prevTickTime:    number | null = null
+  private prevLead:        number | null = null
 
   setMeasurementsSink(sink: ((s: AudioSample) => void) | null): void {
     this.measureSink = sink
-    this.prevTickTime = null
+    this.prevLead = null
   }
 
   constructor(ydoc: Y.Doc) {
@@ -203,18 +203,21 @@ export class AudioEngine {
     })
 
     if (this.measureSink) {
-      const prev = this.prevTickTime
-      this.prevTickTime = time
+      // headroom de programare: cat de devreme fata de momentul programat ruleaza callback-ul.
+      // time e in timeline-ul audio; currentTime e ceasul audio real in momentul executiei
+      // (pe firul principal). Daca firul e ocupat de activitate CRDT/retea, callback-ul
+      // intarzie, lead-ul scade si variaza - asta e jitter-ul real al scheduling-ului.
+      // (timpii programati intre ei sunt perfect regulati, deci nu spun nimic despre incarcare.)
+      const ctxNow_s = Tone.getContext().currentTime
+      const lead_ms  = (time - ctxNow_s) * 1000
+      const prev     = this.prevLead
+      this.prevLead  = lead_ms
       if (prev !== null) {
-        const bpm        = Tone.getTransport().bpm.value
-        const expected_s = 60 / bpm / 4
-        const delta_s    = time - prev
         this.measureSink({
-          tickIndex:   step,
-          delta_ms:    delta_s * 1000,
-          expected_ms: expected_s * 1000,
-          jitter_ms:   Math.abs(delta_s - expected_s) * 1000,
-          at:          Date.now(),
+          tickIndex: step,
+          lead_ms,
+          jitter_ms: Math.abs(lead_ms - prev),
+          at:        Date.now(),
         })
       }
     }
@@ -234,10 +237,10 @@ export class AudioEngine {
 
   // transport: play/stop, local pentru fiecare client
 
-  // prevTickTime se reseteaza la fiecare pornire/oprire, ca pauza dintre sesiuni
-  // sa nu fie masurata drept jitter (delta peste gap ar fi enorm)
-  async start() { await Tone.start(); this.initAudio(); this.prevTickTime = null; Tone.getTransport().start() }
-  stop()        { if (!this.started) return; Tone.getTransport().stop(); Tone.getTransport().position = 0; this.prevTickTime = null }
+  // prevLead se reseteaza la fiecare pornire/oprire, ca pauza dintre sesiuni
+  // sa nu fie masurata drept jitter (saltul de lead peste gap ar fi enorm)
+  async start() { await Tone.start(); this.initAudio(); this.prevLead = null; Tone.getTransport().start() }
+  stop()        { if (!this.started) return; Tone.getTransport().stop(); Tone.getTransport().position = 0; this.prevLead = null }
   get playing() { return this.started && Tone.getTransport().state === 'started' }
 
   // curatenie la dispose

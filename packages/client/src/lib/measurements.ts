@@ -9,11 +9,10 @@ export interface SyncSample {
 }
 
 export interface AudioSample {
-  tickIndex:   number
-  delta_ms:    number
-  expected_ms: number
-  jitter_ms:   number
-  at:          number
+  tickIndex: number
+  lead_ms:   number  // headroom: timpul programat al tick-ului minus ceasul audio real la executie
+  jitter_ms: number  // |lead_ms - lead_ms anterior|: instabilitatea scheduling-ului intre tick-uri
+  at:        number
 }
 
 const RING_LIMIT = 2000

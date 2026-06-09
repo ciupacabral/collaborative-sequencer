@@ -13,14 +13,18 @@ export function DebugOverlay({ ctx }: Props) {
   const [tag, setTag] = useState(store.scenario)
 
   const syncSamples  = store.syncRing.snapshot().map((s) => s.latency_ms)
-  const audioSamples = store.audioRing.snapshot().map((s) => s.jitter_ms)
+  const audioSnap    = store.audioRing.snapshot()
+  const audioSamples = audioSnap.map((s) => s.jitter_ms)
   const audioWindow  = audioSamples.slice(-60)
+  const leadWindow   = audioSnap.map((s) => s.lead_ms).slice(-60)
 
   const p50 = percentile(syncSamples, 50)
   const p95 = percentile(syncSamples, 95)
   const p99 = percentile(syncSamples, 99)
-  const aSig = stdev(audioWindow)
-  const aMax = audioWindow.length === 0 ? null : Math.max(...audioWindow)
+  const aSig    = stdev(audioWindow)
+  const aMax    = audioWindow.length === 0 ? null : Math.max(...audioWindow)
+  const leadMin = leadWindow.length === 0 ? null : Math.min(...leadWindow)
+  const leadAvg = leadWindow.length === 0 ? null : leadWindow.reduce((a, b) => a + b, 0) / leadWindow.length
 
   const onReset     = () => store.reset()
   const onExport    = () => {
@@ -40,6 +44,9 @@ export function DebugOverlay({ ctx }: Props) {
       <div>
         JITTER  σ {fmt(aSig)}  max {fmt(aMax)}
         <span className="text-zinc-500"> [n={audioSamples.length}]</span>
+      </div>
+      <div>
+        LEAD  min {fmt(leadMin)}  avg {fmt(leadAvg)}
       </div>
       <div className="pt-1 border-t border-zinc-800">
         <div className="text-zinc-500">clock offsets:</div>
