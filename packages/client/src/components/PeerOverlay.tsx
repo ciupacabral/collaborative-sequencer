@@ -4,6 +4,8 @@ import type { FocusAddress } from '../types/awareness'
 
 const CHIP_DEBOUNCE_MS = 200
 const MAX_CHIPS        = 2
+// peste 3 inele concentrice nu mai incape nimic intr-o celula de step
+const MAX_RINGS        = 3
 
 interface Props {
   addr:           FocusAddress
@@ -27,20 +29,22 @@ export function PeerOverlay({ addr, children, className, onMouseEnter, onMouseLe
 
   return (
     <span
-      className={`relative inline-block ${className ?? ''}`}
+      className={`relative inline-flex ${className ?? ''}`}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
       {children}
 
-      {focusedPeers.map((p, i) => (
+      {/* inele desenate spre interior, ca sa nu fie taiate de containerele cu overflow
+          si sa nu se suprapuna peste celulele vecine */}
+      {focusedPeers.slice(0, MAX_RINGS).map((p, i) => (
         <span
           key={p.clientID}
           aria-hidden
           className="absolute inset-0 rounded-[inherit] pointer-events-none transition-[outline] duration-75"
           style={{
             outline:       `2px solid ${p.color}`,
-            outlineOffset: `${i * 2}px`,
+            outlineOffset: `-${(i + 1) * 2}px`,
           }}
         />
       ))}
@@ -53,7 +57,7 @@ export function PeerOverlay({ addr, children, className, onMouseEnter, onMouseLe
             key={e.editId}
             aria-hidden
             className="peer-edit-pulse absolute inset-0 rounded-[inherit]"
-            style={{ boxShadow: `0 0 0 3px ${color}` }}
+            style={{ boxShadow: `inset 0 0 0 3px ${color}` }}
           />
         )
       })}

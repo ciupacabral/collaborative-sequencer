@@ -61,8 +61,13 @@ function SequencerShell({ roomId }: { roomId: string }) {
   }, [roomId, state.name])
 
   const copyUrl = async () => {
-    await navigator.clipboard.writeText(window.location.href)
-    setCopied(true); setTimeout(() => setCopied(false), 2000)
+    try {
+      await navigator.clipboard.writeText(window.location.href)
+      setCopied(true); setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // clipboard indisponibil (ex. context nesecurizat); fallback cu prompt
+      window.prompt('Copy link', window.location.href)
+    }
   }
 
   const dot = { connecting: 'bg-yellow-500', connected: 'bg-green-500', disconnected: 'bg-red-500' }[status]
@@ -79,7 +84,7 @@ function SequencerShell({ roomId }: { roomId: string }) {
   }
 
   return (
-    <div className="min-h-screen bg-surface text-white font-mono p-6 space-y-4">
+    <div className="min-h-screen bg-surface text-white font-mono p-3 sm:p-6 space-y-4">
 
       {/* header */}
       <div className="flex items-center justify-between gap-4">
@@ -87,6 +92,7 @@ function SequencerShell({ roomId }: { roomId: string }) {
           <button onClick={() => navigate('/')} className="text-zinc-500 hover:text-white transition-colors text-xs shrink-0">← Home</button>
           <PeerOverlay
             addr={{ kind: 'sessionName' }}
+            className="min-w-0 max-w-full"
             onMouseEnter={() => setFocusShell({ kind: 'sessionName' })}
             onMouseLeave={() => setFocusShell(null)}
           >
@@ -110,10 +116,11 @@ function SequencerShell({ roomId }: { roomId: string }) {
       </div>
 
       {/* transport */}
-      <div className="bg-panel border border-border rounded-lg p-4 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4">
+      <div className="bg-panel border border-border rounded-lg p-3 sm:p-4 flex flex-wrap items-center gap-3 sm:gap-4">
         <button onClick={toggle} disabled={status !== 'connected'}
-          className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors shrink-0 ${
-            playing ? 'bg-red-600 hover:bg-red-500' : 'bg-violet-600 hover:bg-violet-500 disabled:opacity-40'
+          aria-label={playing ? 'Stop' : 'Play'}
+          className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors shrink-0 disabled:opacity-40 ${
+            playing ? 'bg-red-600 hover:bg-red-500' : 'bg-violet-600 hover:bg-violet-500'
           }`}>
           {playing
             ? <span className="w-3 h-3 bg-white rounded-sm" />
@@ -141,10 +148,10 @@ function SequencerShell({ roomId }: { roomId: string }) {
             onChange={(e) => setBpmInput(e.target.value)}
             onBlur={commitBpm}
             onKeyDown={handleBpmKey}
-            className="w-16 bg-zinc-800 text-right text-sm tabular-nums px-2 py-1 rounded border border-transparent focus:border-violet-500 outline-none"
+            className="w-16 bg-zinc-800 text-right text-base sm:text-sm tabular-nums px-2 py-1 rounded border border-transparent focus-visible:border-violet-500 outline-none"
           />
         </PeerOverlay>
-        <button onClick={copyUrl} className="text-xs px-3 py-1.5 rounded bg-zinc-700 hover:bg-zinc-600 transition-colors">
+        <button onClick={copyUrl} className="w-20 text-center text-xs px-3 py-1.5 rounded bg-zinc-700 hover:bg-zinc-600 transition-colors">
           {copied ? 'Copied!' : 'Share'}
         </button>
         <button onClick={() => setQrOpen(true)} className="text-xs px-3 py-1.5 rounded bg-zinc-700 hover:bg-zinc-600 transition-colors" title="Show QR code">
@@ -163,8 +170,8 @@ function SequencerShell({ roomId }: { roomId: string }) {
           <div key={track.id} className="bg-panel border border-border rounded-lg p-4">
             {/* antetul track-ului */}
             <div className="flex items-start gap-3 mb-4">
-              <div className="flex flex-col shrink-0">
-                <span className="text-xs uppercase tracking-widest text-zinc-600">{track.type}</span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs uppercase tracking-widest text-zinc-400">{track.type}</span>
                 <PeerOverlay
                   addr={{ kind: 'trackName', trackId: track.id }}
                   onMouseEnter={() => setFocusShell({ kind: 'trackName', trackId: track.id })}
@@ -175,14 +182,16 @@ function SequencerShell({ roomId }: { roomId: string }) {
               </div>
               <div className="flex gap-2 ml-auto flex-wrap">
                 <button onClick={() => mutations.setTrackMuted(idx, !track.muted)}
-                  className={`text-xs px-2.5 py-1 rounded transition-colors ${track.muted ? 'bg-red-900 text-red-300' : 'bg-zinc-700 text-zinc-300'}`}>
+                  aria-pressed={track.muted}
+                  className={`text-xs px-2.5 py-2 sm:py-1 rounded transition-colors ${track.muted ? 'bg-red-900 text-red-300 hover:bg-red-800' : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'}`}>
                   {track.muted ? 'Muted' : 'Mute'}
                 </button>
                 <button onClick={() => mutations.duplicateTrack(idx)}
                   title="Duplicate track"
-                  className="text-xs px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200 transition-colors">⎘</button>
-                <button onClick={() => mutations.removeTrack(idx)}
-                  className="text-xs px-2.5 py-1 rounded bg-zinc-800 hover:bg-red-900 text-zinc-500 hover:text-red-300 transition-colors">✕</button>
+                  className="text-xs px-2.5 py-2 sm:py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200 transition-colors">⎘</button>
+                <button onClick={() => { if (window.confirm(`Delete track "${track.name}"?`)) mutations.removeTrack(idx) }}
+                  aria-label="Delete track"
+                  className="text-xs px-2.5 py-2 sm:py-1 rounded bg-zinc-800 hover:bg-red-900 text-zinc-500 hover:text-red-300 transition-colors">✕</button>
               </div>
             </div>
 
@@ -192,12 +201,12 @@ function SequencerShell({ roomId }: { roomId: string }) {
         ))}
 
         {state.tracks.length === 0 && (
-          <p className="text-center text-zinc-600 py-16 text-sm">No tracks — add a Drum or Melodic track above.</p>
+          <p className="text-center text-zinc-400 py-16 text-sm">No tracks yet — add a Drum, Melodic or Bass track above.</p>
         )}
       </div>
 
       <details className="bg-panel border border-border rounded-lg">
-        <summary className="p-3 text-xs text-zinc-600 cursor-pointer hover:text-zinc-400">Y.js snapshot</summary>
+        <summary className="p-3 text-xs text-zinc-400 cursor-pointer hover:text-zinc-300">Y.js snapshot</summary>
         <pre className="p-4 text-xs text-zinc-500 overflow-auto max-h-48 border-t border-border">{JSON.stringify(state, null, 2)}</pre>
       </details>
 
@@ -226,13 +235,16 @@ function SessionNameEditor({ name, onSave }: { name: string; onSave: (n: string)
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setDraft(name); setEditing(false) } }}
-        className="bg-zinc-800 px-2 py-0.5 rounded font-semibold outline-none border border-violet-500 w-48"
+        className="bg-zinc-800 px-2 py-0.5 rounded font-semibold outline-none border border-violet-500 max-w-full"
+        style={{ width: `calc(${Math.max(draft.length, 6)}ch + 1.25rem)` }}
       />
     )
   }
   return (
     <span onClick={() => { setDraft(name); setEditing(true) }} title="Click to rename"
-      className="font-semibold cursor-pointer hover:text-zinc-300 border-b border-transparent hover:border-zinc-500 transition-colors truncate max-w-xs">
+      role="button" tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter') { setDraft(name); setEditing(true) } }}
+      className="block font-semibold cursor-pointer hover:text-zinc-300 border-b border-transparent hover:border-zinc-500 transition-colors truncate max-w-xs focus-visible:ring-1 focus-visible:ring-violet-400 outline-none">
       {name}
     </span>
   )
@@ -258,13 +270,16 @@ function TrackNameEditor({ name, trackIdx }: { name: string; trackIdx: number })
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setDraft(name); setEditing(false) } }}
-        className="bg-zinc-800 px-2 py-0.5 rounded text-sm font-semibold outline-none border border-violet-500 w-32 mt-0.5"
+        className="bg-zinc-800 px-2 py-0.5 rounded text-base sm:text-sm font-semibold outline-none border border-violet-500 mt-0.5 max-w-full"
+        style={{ width: `calc(${Math.max(draft.length, 6)}ch + 1.25rem)` }}
       />
     )
   }
   return (
     <span onClick={() => { setDraft(name); setEditing(true) }} title="Click to rename"
-      className="font-semibold text-sm cursor-pointer hover:text-zinc-300 border-b border-transparent hover:border-zinc-500 transition-colors mt-0.5">
+      role="button" tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter') { setDraft(name); setEditing(true) } }}
+      className="inline-block align-bottom max-w-48 truncate font-semibold text-sm cursor-pointer hover:text-zinc-300 border-b border-transparent hover:border-zinc-500 transition-colors mt-0.5 focus-visible:ring-1 focus-visible:ring-violet-400 outline-none">
       {name}
     </span>
   )
@@ -278,11 +293,12 @@ function ParamSlider({ label, min, max, step = 0.001, value, onChange, fmt }: {
 }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs text-zinc-500 w-14 shrink-0">{label}</span>
+      <span className="text-xs text-zinc-400 w-14 shrink-0">{label}</span>
       <input type="range" min={min} max={max} step={step} value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-24 accent-violet-500" />
-      <span className="text-xs tabular-nums text-zinc-400 w-12 text-right">
+        className="w-40 sm:w-24 accent-violet-500" />
+      {/* latime fixa + nowrap, ca valoarea sa nu re-aseze randul cand creste textul */}
+      <span className="text-xs tabular-nums text-zinc-400 w-16 shrink-0 whitespace-nowrap text-right">
         {fmt ? fmt(value) : value.toFixed(2)}
       </span>
     </div>
@@ -294,7 +310,7 @@ function PresetPicker<T extends string>({ keys, value, onChange }: { keys: T[]; 
     <div className="flex gap-1 flex-wrap">
       {keys.map((k) => (
         <button key={k} onClick={() => onChange(k)}
-          className={`text-xs px-2 py-0.5 rounded capitalize transition-colors ${
+          className={`text-xs px-2 py-1.5 sm:py-0.5 rounded capitalize transition-colors ${
             value === k ? 'bg-violet-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
           }`}>
           {k}
@@ -307,11 +323,11 @@ function PresetPicker<T extends string>({ keys, value, onChange }: { keys: T[]; 
 function StepCountPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs text-zinc-500 w-14 shrink-0">Steps</span>
+      <span className="text-xs text-zinc-400 w-14 shrink-0">Steps</span>
       <div className="flex gap-1">
         {STEP_COUNT_OPTIONS.map((n) => (
           <button key={n} onClick={() => onChange(n)}
-            className={`text-xs px-2 py-0.5 rounded transition-colors tabular-nums ${
+            className={`text-xs px-2 py-1.5 sm:py-0.5 rounded transition-colors tabular-nums ${
               value === n ? 'bg-violet-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
             }`}>
             {n}
@@ -337,43 +353,50 @@ function DrumGrid({ track, trackIdx, currentStep }: { track: DrumTrack; trackIdx
 
   return (
     <div className="space-y-3">
-      <div className="space-y-2">
-        {LANE_META.map(({ inst, keys, param, current }) => (
-          <div key={inst} className="flex items-center gap-2 flex-wrap">
-            <span className="w-11 text-xs text-zinc-500 capitalize shrink-0">{inst}</span>
-            <div className="flex gap-1 overflow-x-auto max-w-full">
-              {track.lanes[inst].slice(0, sc).map((active, step) => {
-                const addr: FocusAddress = { kind: 'drumStep', trackId: track.id, instrument: inst, step }
-                return (
-                  <PeerOverlay key={step} addr={addr}>
-                    <button onClick={() => toggleDrumStep(trackIdx, inst, step)}
-                      onMouseEnter={() => setFocus(addr)}
-                      onMouseLeave={() => setFocus(null)}
-                      className={[
-                        'w-9 h-9 sm:w-7 sm:h-7 rounded transition-colors',
-                        active ? 'bg-violet-500 hover:bg-violet-400' : 'bg-zinc-800 hover:bg-zinc-700',
-                        (currentStep % sc) === step ? 'ring-1 ring-white/60' : '',
-                        step % 4 === 0 && step !== 0 ? 'ml-1' : '',
-                      ].join(' ')}
-                    />
-                  </PeerOverlay>
-                )
-              })}
+      {/* un singur container de scroll pentru toate lane-urile, ca pasii sa ramana
+          aliniati vertical; pt-2/-mt-2 lasa loc chip-urilor de peer deasupra */}
+      <div className="overflow-x-auto max-w-full pt-2 -mt-2">
+        <div className="space-y-2 min-w-max">
+          {LANE_META.map(({ inst }) => (
+            <div key={inst} className="flex items-center gap-2">
+              <span className="w-14 text-xs text-zinc-400 capitalize shrink-0 sticky left-0 z-20 bg-panel">{inst}</span>
+              <div className="flex gap-1">
+                {track.lanes[inst].slice(0, sc).map((active, step) => {
+                  const addr: FocusAddress = { kind: 'drumStep', trackId: track.id, instrument: inst, step }
+                  return (
+                    <PeerOverlay key={step} addr={addr} className="rounded">
+                      <button onClick={() => toggleDrumStep(trackIdx, inst, step)}
+                        onMouseEnter={() => setFocus(addr)}
+                        onMouseLeave={() => setFocus(null)}
+                        className={[
+                          'w-9 h-9 sm:w-7 sm:h-7 rounded transition-colors',
+                          active ? 'bg-violet-500 hover:bg-violet-400' : 'bg-zinc-800 hover:bg-zinc-700',
+                          (currentStep % sc) === step ? 'ring-1 ring-white/60' : '',
+                          step % 4 === 0 && step !== 0 ? 'ml-1' : '',
+                        ].join(' ')}
+                      />
+                    </PeerOverlay>
+                  )
+                })}
+              </div>
             </div>
-            <div className="ml-2">
-              <PeerOverlay
-                addr={{ kind: 'param', trackId: track.id, key: param }}
-                onMouseEnter={() => setFocus({ kind: 'param', trackId: track.id, key: param })}
-                onMouseLeave={() => setFocus(null)}
-              >
-                <PresetPicker keys={keys} value={current} onChange={(v) => setTrackParameter(trackIdx, param, v)} />
-              </PeerOverlay>
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      <div className="pt-2 border-t border-border flex flex-wrap gap-x-6 gap-y-2">
+      <div className="pt-3 border-t border-border flex flex-wrap gap-x-6 gap-y-2">
+        {LANE_META.map(({ inst, keys, param, current }) => (
+          <div key={param} className="flex items-center gap-2">
+            <span className="text-xs text-zinc-400 w-14 shrink-0 capitalize">{inst}</span>
+            <PeerOverlay
+              addr={{ kind: 'param', trackId: track.id, key: param }}
+              onMouseEnter={() => setFocus({ kind: 'param', trackId: track.id, key: param })}
+              onMouseLeave={() => setFocus(null)}
+            >
+              <PresetPicker keys={keys} value={current} onChange={(v) => setTrackParameter(trackIdx, param, v)} />
+            </PeerOverlay>
+          </div>
+        ))}
         <PeerOverlay addr={{ kind: 'param', trackId: track.id, key: 'stepCount' }}
           onMouseEnter={() => setFocus({ kind: 'param', trackId: track.id, key: 'stepCount' })}
           onMouseLeave={() => setFocus(null)}>
@@ -384,7 +407,7 @@ function DrumGrid({ track, trackIdx, currentStep }: { track: DrumTrack; trackIdx
           onMouseLeave={() => setFocus(null)}>
           <ParamSlider label="Volume" min={-40} max={6} step={0.5} value={track.parameters.volume}
             onChange={(v) => setTrackParameter(trackIdx, 'volume', v)}
-            fmt={(v) => `${v} dB`} />
+            fmt={(v) => `${v.toFixed(1)} dB`} />
         </PeerOverlay>
         <PeerOverlay addr={{ kind: 'param', trackId: track.id, key: 'decay' }}
           onMouseEnter={() => setFocus({ kind: 'param', trackId: track.id, key: 'decay' })}
@@ -416,12 +439,15 @@ function MelodicGrid({ track, trackIdx, currentStep, previewNote }: {
   const { setMelodicStep, setMelodicPreset, setTrackParameter } = useSignaledMutations()
   const { setFocus } = useLocalFocus()
   const pianoRollRef = useRef<HTMLDivElement | null>(null)
-  const ROW_HEIGHT_PX = 15
+
+  // inaltimea reala a unui rand se masoara la runtime (difera intre desktop si mobil)
+  const rowHeight = (el: HTMLDivElement) => el.scrollHeight / PIANO_ROLL.length
 
   const shiftOctave = (delta: -1 | 1) => {
     const el = pianoRollRef.current
     if (!el) return
-    const next = el.scrollTop + delta * ROW_HEIGHT_PX * 12
+    // PIANO_ROLL e ordonat de la acut la grav, deci "+" inseamna scroll in sus
+    const next = el.scrollTop - delta * rowHeight(el) * 12
     el.scrollTo({ top: Math.max(0, Math.min(next, el.scrollHeight - el.clientHeight)), behavior: 'smooth' })
   }
 
@@ -432,7 +458,7 @@ function MelodicGrid({ track, trackIdx, currentStep, previewNote }: {
     const targetNote = isBass ? 'A2' : 'C4'
     const rowIndex   = PIANO_ROLL.indexOf(targetNote)
     if (rowIndex < 0) return
-    el.scrollTop = Math.max(0, rowIndex * ROW_HEIGHT_PX - 80)
+    el.scrollTop = Math.max(0, rowIndex * rowHeight(el) - 80)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [track.id])
 
@@ -443,7 +469,7 @@ function MelodicGrid({ track, trackIdx, currentStep, previewNote }: {
     <div className="space-y-3">
       {/* preset de sunet */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-zinc-500 w-14 shrink-0">Sound</span>
+        <span className="text-xs text-zinc-400 w-14 shrink-0">Sound</span>
         <PeerOverlay addr={{ kind: 'param', trackId: track.id, key: 'preset' }}
           onMouseEnter={() => setFocus({ kind: 'param', trackId: track.id, key: 'preset' })}
           onMouseLeave={() => setFocus(null)}>
@@ -453,12 +479,12 @@ function MelodicGrid({ track, trackIdx, currentStep, previewNote }: {
       </div>
 
       {/* parametri */}
-      <div className="flex flex-wrap gap-x-6 gap-y-2">
+      <div className="border-t border-border pt-3 flex flex-wrap gap-x-6 gap-y-2">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-zinc-500 w-14 shrink-0">Octave</span>
+          <span className="text-xs text-zinc-400 w-14 shrink-0">Octave</span>
           <div className="flex gap-1">
-            <button onClick={() => shiftOctave(-1)} className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors">−</button>
-            <button onClick={() => shiftOctave(+1)} className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors">+</button>
+            <button onClick={() => shiftOctave(-1)} aria-label="Octave down" className="text-xs px-3 sm:px-2 py-1.5 sm:py-0.5 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors">−</button>
+            <button onClick={() => shiftOctave(+1)} aria-label="Octave up" className="text-xs px-3 sm:px-2 py-1.5 sm:py-0.5 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors">+</button>
           </div>
         </div>
         <PeerOverlay addr={{ kind: 'param', trackId: track.id, key: 'stepCount' }}
@@ -469,7 +495,7 @@ function MelodicGrid({ track, trackIdx, currentStep, previewNote }: {
         <PeerOverlay addr={{ kind: 'param', trackId: track.id, key: 'volume' }}
           onMouseEnter={() => setFocus({ kind: 'param', trackId: track.id, key: 'volume' })}
           onMouseLeave={() => setFocus(null)}>
-          <ParamSlider label="Volume"  min={-40} max={6}   step={0.5}   value={p.volume}  onChange={(v) => setTrackParameter(trackIdx, 'volume',  v)} fmt={(v) => `${v} dB`} />
+          <ParamSlider label="Volume"  min={-40} max={6}   step={0.5}   value={p.volume}  onChange={(v) => setTrackParameter(trackIdx, 'volume',  v)} fmt={(v) => `${v.toFixed(1)} dB`} />
         </PeerOverlay>
         <PeerOverlay addr={{ kind: 'param', trackId: track.id, key: 'attack' }}
           onMouseEnter={() => setFocus({ kind: 'param', trackId: track.id, key: 'attack' })}
@@ -493,27 +519,30 @@ function MelodicGrid({ track, trackIdx, currentStep, previewNote }: {
         </PeerOverlay>
       </div>
 
-      {/* randul cu playhead-ul */}
-      <div className="flex gap-1 pl-10 border-t border-border pt-3">
-        {Array.from({ length: sc }, (_, i) => (
-          <div key={i} className={`w-7 h-1 rounded-sm transition-colors ${(currentStep % sc) === i ? 'bg-white/50' : 'bg-transparent'} ${i % 4 === 0 && i !== 0 ? 'ml-1' : ''}`} />
-        ))}
-      </div>
-
       {/* piano roll: suporta polifonie, mai multe note pe aceeasi coloana */}
       <div ref={pianoRollRef} className="max-h-[300px] overflow-auto pr-1 border border-zinc-800 rounded">
-        <div className="space-y-px">
+        {/* playhead-ul sta in interiorul scroller-ului ca sa ramana aliniat cu coloanele
+            la orice pozitie de scroll; sticky il tine vizibil la scroll vertical */}
+        <div className="sticky top-0 z-30 bg-panel flex items-center gap-2 pb-1">
+          <span className="sticky left-0 z-40 bg-panel w-8 shrink-0" />
+          <div className="flex gap-1">
+            {Array.from({ length: sc }, (_, i) => (
+              <div key={i} className={`w-9 sm:w-7 h-1 shrink-0 rounded-sm transition-colors ${(currentStep % sc) === i ? 'bg-white/50' : 'bg-transparent'} ${i % 4 === 0 && i !== 0 ? 'ml-1' : ''}`} />
+            ))}
+          </div>
+        </div>
+        <div className="space-y-0.5 sm:space-y-px pt-1">
         {PIANO_ROLL.map((note) => {
           const isBlack = note.includes('#')
           return (
             <div key={note} className="flex items-center gap-2">
-              <span className={`sticky left-0 z-10 bg-panel pr-1 w-8 text-right text-xs shrink-0 ${isBlack ? 'text-zinc-700' : 'text-zinc-500'}`}>{note}</span>
+              <span className={`sticky left-0 z-20 bg-panel pr-1 w-8 text-right text-xs shrink-0 ${isBlack ? 'text-zinc-500' : 'text-zinc-400'}`}>{note}</span>
               <div className="flex gap-1">
                 {track.steps.slice(0, sc).map((step, si) => {
                   const lit = !!step[note]
                   const addr: FocusAddress = { kind: 'melodicStep', trackId: track.id, step: si, note }
                   return (
-                    <PeerOverlay key={si} addr={addr}>
+                    <PeerOverlay key={si} addr={addr} className="rounded-sm">
                       <button
                         onClick={() => {
                           const nowActive = !lit
@@ -523,7 +552,7 @@ function MelodicGrid({ track, trackIdx, currentStep, previewNote }: {
                         onMouseEnter={() => setFocus(addr)}
                         onMouseLeave={() => setFocus(null)}
                         className={[
-                          'w-9 h-5 sm:w-7 sm:h-3.5 rounded-sm transition-colors',
+                          'w-9 h-7 sm:w-7 sm:h-3.5 rounded-sm transition-colors',
                           lit ? 'bg-violet-500 hover:bg-violet-400' : isBlack ? 'bg-zinc-900 hover:bg-zinc-700' : 'bg-zinc-800 hover:bg-zinc-700',
                           (currentStep % sc) === si ? 'ring-1 ring-white/40' : '',
                           si % 4 === 0 && si !== 0 ? 'ml-1' : '',

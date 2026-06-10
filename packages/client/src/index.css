@@ -7,12 +7,19 @@ body {
   background-color: #0f0f0f;
 }
 
+/* doar fade pe opacitate; scale ar iesi din celula si ar fi taiat de overflow */
 @keyframes peer-edit-pulse {
-  0%   { opacity: 1; transform: scale(1.15); }
-  100% { opacity: 0; transform: scale(1.00); }
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 .peer-edit-pulse {
   animation: peer-edit-pulse 1200ms ease-out forwards;
   pointer-events: none;
+}
+
+/* focus vizibil unitar pentru navigarea cu tastatura */
+button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #a78bfa;
 }
