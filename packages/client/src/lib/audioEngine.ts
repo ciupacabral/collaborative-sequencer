@@ -1,7 +1,7 @@
 import * as Tone from 'tone'
 import * as Y from 'yjs'
 import { DRUM_INSTRUMENTS, MAX_STEP_COUNT, DEFAULT_STEP_COUNT } from '../types/sequencer'
-import type { YTrack, YLanes, YSteps } from './yjsSchema'
+import { laneStepActive, type YTrack, type YLanes, type YSteps } from './yjsSchema'
 import {
   KICK_PRESETS, SNARE_PRESETS, HIHAT_PRESETS,
   type KickPreset, type SnarePreset, type HihatPreset,
@@ -185,7 +185,7 @@ export class AudioEngine {
         const lanes = t.get('lanes') as YLanes | undefined
         const decay = (p?.get('decay') as number) ?? 0.4
         DRUM_INSTRUMENTS.forEach((inst) => {
-          if (!(lanes?.get(inst) as Y.Array<boolean> | undefined)?.get(localStep)) return
+          if (!laneStepActive(lanes?.get(inst), localStep)) return
           if (inst === 'kick')  entry.kit.kick.triggerAttackRelease('C1', decay, time)
           if (inst === 'snare') entry.kit.snare.triggerAttackRelease(decay * 0.5, time)
           if (inst === 'hihat') entry.kit.hihat.triggerAttackRelease(decay * 0.4, time)

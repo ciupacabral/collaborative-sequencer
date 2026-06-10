@@ -13,10 +13,15 @@ import {
 } from '../types/sequencer'
 import { MELODIC_PRESETS, type MelodicPreset } from './presets'
 
-// yjs e netipat la runtime; alias-urile servesc doar la tiparea TS
+// yjs e netipat la runtime; alias-urile servesc doar la tiparea TS.
+// un lane e un Y.Map cu cheia = indexul pasului (ca string): scrierile concurente
+// pe aceeasi celula converg prin last-writer-wins. un Y.Array<boolean> nu poate
+// oferi asta - inlocuirea unei celule ar insemna delete + insert, iar doua
+// insert-uri concurente pe acelasi index supravietuiesc amandoua dupa merge
 export type YSequencerRoot = Y.Map<unknown>
 export type YTrack         = Y.Map<unknown>
-export type YLanes         = Y.Map<Y.Array<boolean>>
+export type YLane          = Y.Map<boolean>
+export type YLanes         = Y.Map<YLane>
 export type YSteps         = Y.Array<Y.Map<boolean>>
 export type YParameters    = Y.Map<unknown>
 
@@ -49,9 +54,8 @@ export function createDrumTrackYMap(id: string, name: string): YTrack {
 
   const lanes = new Y.Map() as YLanes
   for (const instrument of DRUM_INSTRUMENTS) {
-    const lane = new Y.Array<boolean>()
-    lane.insert(0, new Array<boolean>(MAX_STEP_COUNT).fill(false))
-    lanes.set(instrument, lane)
+    // lane-ul porneste gol: o cheie absenta inseamna pas inactiv
+    lanes.set(instrument, new Y.Map<boolean>())
   }
   track.set('lanes', lanes)
 
@@ -96,6 +100,21 @@ export function createMelodicTrackYMap(id: string, name: string, presetOverride?
   return track
 }
 
+// citeste un lane ca boolean[MAX_STEP_COUNT].
+// accepta si formatul vechi (Y.Array<boolean>), ca documentele create inainte
+// de migrarea la Y.Map sa nu crape clientul
+export function laneToArray(lane: unknown): boolean[] {
+  if (lane instanceof Y.Array) return (lane as Y.Array<boolean>).toArray()
+  const map = lane as YLane | undefined
+  return Array.from({ length: MAX_STEP_COUNT }, (_, i) => map?.get(String(i)) ?? false)
+}
+
+// citire punctuala a unei celule, folosita de scheduler-ul audio
+export function laneStepActive(lane: unknown, stepIndex: number): boolean {
+  if (lane instanceof Y.Array) return !!(lane as Y.Array<boolean>).get(stepIndex)
+  return !!(lane as YLane | undefined)?.get(String(stepIndex))
+}
+
 // converteste Y.Doc-ul intr-un obiect JS simplu, comparabil de catre React.
 // ruleaza in getSnapshot (useSyncExternalStore), deci trebuie sa fie pur si rapid
 export function snapshotSequencer(ydoc: Y.Doc): SequencerSnapshot {
@@ -124,10 +143,7 @@ function snapshotTrack(yTrack: YTrack): Track | null {
   if (type === 'drum') {
     const yLanes = yTrack.get('lanes') as YLanes
     const lanes  = Object.fromEntries(
-      DRUM_INSTRUMENTS.map((inst) => [
-        inst,
-        (yLanes.get(inst) as Y.Array<boolean>).toArray(),
-      ]),
+      DRUM_INSTRUMENTS.map((inst) => [inst, laneToArray(yLanes.get(inst))]),
     ) as DrumTrack['lanes']
 
     const yParams    = yTrack.get('parameters') as YParameters
@@ -201,9 +217,8 @@ export function duplicateTrack(ydoc: Y.Doc, trackIndex: number, newId: string): 
       const srcLanes = source.get('lanes') as YLanes
       const newLanes = new Y.Map() as YLanes
       for (const inst of DRUM_INSTRUMENTS) {
-        const srcLane = srcLanes.get(inst) as Y.Array<boolean>
-        const newLane = new Y.Array<boolean>()
-        newLane.insert(0, srcLane.toArray())
+        const newLane = new Y.Map<boolean>()
+        laneToArray(srcLanes.get(inst)).forEach((v, i) => { if (v) newLane.set(String(i), true) })
         newLanes.set(inst, newLane)
       }
       copy.set('lanes', newLanes)
@@ -229,9 +244,10 @@ export function duplicateTrack(ydoc: Y.Doc, trackIndex: number, newId: string): 
   })
 }
 
-// comuta un singur pas de toba.
-// atentie: Y.Array nu are .set(i, val), deci se sterge slotul si se insereaza valoarea noua.
-// ambele in aceeasi tranzactie, altfel s-ar propaga momentan un array cu o celula lipsa
+// comuta un singur pas de toba printr-un set pe cheia celulei (last-writer-wins).
+// varianta initiala folosea Y.Array cu delete + insert, dar doua comutari
+// concurente pe acelasi index produceau doua insert-uri care supravietuiau
+// amandoua dupa merge: lane-ul crestea si pasii se deplasau cu o pozitie
 export function toggleDrumStep(
   ydoc:        Y.Doc,
   trackIndex:  number,
@@ -239,12 +255,21 @@ export function toggleDrumStep(
   stepIndex:   number,
 ): void {
   ydoc.transact(() => {
-    const yTrack  = getYTracks(ydoc).get(trackIndex)
-    const yLanes  = yTrack.get('lanes') as YLanes
-    const yLane   = yLanes.get(instrument) as Y.Array<boolean>
-    const current = yLane.get(stepIndex)
-    yLane.delete(stepIndex, 1)
-    yLane.insert(stepIndex, [!current])
+    const yTrack = getYTracks(ydoc).get(trackIndex)
+    const yLanes = yTrack.get('lanes') as YLanes
+    let yLane    = yLanes.get(instrument)
+
+    // migrare in-place a documentelor in format vechi (Y.Array<boolean>)
+    if (yLane instanceof Y.Array) {
+      const migrated = new Y.Map<boolean>()
+      ;(yLane as Y.Array<boolean>).toArray().forEach((v, i) => { if (v) migrated.set(String(i), true) })
+      yLanes.set(instrument, migrated)
+      yLane = migrated
+    }
+
+    const lane    = yLane as YLane
+    const current = lane.get(String(stepIndex)) ?? false
+    lane.set(String(stepIndex), !current)
   })
 }
 
